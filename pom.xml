@@ -6,7 +6,74 @@
 
     <groupId>dt.sql.alarm</groupId>
     <artifactId>sqlalarm</artifactId>
+    <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
+    <modules>
+        <module>sa-commons</module>
+        <module>sa-core</module>
+        <module>sa-msgpiper</module>
+        <module>sa-admin</module>
+    </modules>
 
+    <name>SQLAlarm Parent POM</name>
+    <url>https://github.com/bebee4java/sqlalarm</url>
+    <description>Big data smart alarm by sql.</description>
+
+    <licenses>
+        <license>
+            <name>Apache 2.0 License</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <developers>
+        <developer>
+            <id>bebee4java</id>
+            <name>songgongru</name>
+            <email>grsong.cn@gmail.com</email>
+        </developer>
+    </developers>
+
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <java.version>1.8</java.version>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+
+        <scala.version>2.11.12</scala.version>
+        <scala.compat.version>2.11</scala.compat.version>
+        <scope>provided</scope>
+        <plugin.maven.scala.version>3.1.3</plugin.maven.scala.version>
+
+        <spring.boot.version>2.2.1.RELEASE</spring.boot.version>
+        <swagger.version>2.9.2</swagger.version>
+
+        <spark.version>2.4.3</spark.version>
+        <spark.bigversion>2.4</spark.bigversion>
+    </properties>
+
+
+    <dependencies>
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>${scala.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <version>${spring.boot.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>ch.qos.logback</groupId>
+                    <artifactId>logback-classic</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+    </dependencies>
 
 </project>
