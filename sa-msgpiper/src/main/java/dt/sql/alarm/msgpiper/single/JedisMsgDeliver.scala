@@ -1,7 +1,6 @@
 package dt.sql.alarm.msgpiper.single
 
 import java.util
-
 import dt.sql.alarm.exception.SQLAlarmException
 import dt.sql.alarm.msgpiper.MsgDeliver
 import dt.sql.alarm.msgpiper.constants.Constants
@@ -47,13 +46,21 @@ private[msgpiper] class JedisMsgDeliver(conf:Map[String,Object]) extends MsgDeli
     val host = strs(0)
     val port = Integer.parseInt(strs(1))
 
-    new JedisPool(config, host, port, TIMEOUT, password, dbIndex)
+    val pool = new JedisPool(config, host, port, TIMEOUT, password, dbIndex)
+    logInfo("JedisMsgDeliver create jedisPool succeed!")
+    pool
   }
 
+  override def destroy(): Unit = {
+    if (jedisPool != null){
+      jedisPool.destroy()
+      jedisPool = null
+    }
+  }
 
   private def getJedis: Jedis = {
     if (jedisPool == null)
-      initPool
+      jedisPool = initPool
 
     var jedis: Jedis = null
     jedis = jedisPool.getResource
@@ -70,4 +77,19 @@ private[msgpiper] class JedisMsgDeliver(conf:Map[String,Object]) extends MsgDeli
     jedis
   }
 
+  override def getKeys(pattern: String): Set[String] = {
+    var jedis:Jedis= null
+    try {
+      jedis = getJedis
+      import scala.collection.JavaConverters._
+      jedis.keys(pattern).asScala.toSet[String]
+    } catch {
+      case e:Exception => {
+        logError(s"get keys error! pattern: $pattern" ,e)
+        Set.empty[String]
+      }
+    } finally {
+      close(jedis)
+    }
+  }
 }

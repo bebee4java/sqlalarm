@@ -18,7 +18,6 @@ private[msgpiper] class JedisSentinelMsgDeliver(conf:Map[String,Object]) extends
 
   override def clinet: JedisCommands = getJedis
 
-
   def initPool = {
     if (jedisPool != null) {
       logInfo("==== JedisSentinelMsgDeliver reconnect jedisPool... ====")
@@ -30,7 +29,7 @@ private[msgpiper] class JedisSentinelMsgDeliver(conf:Map[String,Object]) extends
     val maxIdle = conf.getOrElse(Constants.JEDIS_MAXIDLE, 10).asInstanceOf[Int]
     val maxTotal = conf.getOrElse(Constants.JEDIS_MAXTOTAL, 30).asInstanceOf[Int]
     val address = conf.get(Constants.JEDIS_ADDRESSES)
-    val password = conf.getOrElse(Constants.JEDIS_PASSWORD, "").asInstanceOf[String]
+    val password = conf.getOrElse(Constants.JEDIS_PASSWORD, null).asInstanceOf[String]
     val dbIndex = conf.getOrElse(Constants.JEDIS_DATABASE, 0).asInstanceOf[Int]
     val master = conf.get(Constants.JEDIS_SENTINEL_MASTER).asInstanceOf[String]
 
@@ -56,13 +55,21 @@ private[msgpiper] class JedisSentinelMsgDeliver(conf:Map[String,Object]) extends
         sentinels.add(address)
     }
 
-    new JedisSentinelPool(master, sentinels, config, TIMEOUT, password, dbIndex)
+    val pool = new JedisSentinelPool(master, sentinels, config, TIMEOUT, password, dbIndex)
+    logInfo("JedisSentinelMsgDeliver create jedisPool succeed!")
+    pool
   }
 
+  override def destroy(): Unit = {
+    if (jedisPool != null){
+      jedisPool.destroy()
+      jedisPool = null
+    }
+  }
 
   private def getJedis:Jedis = {
     if (jedisPool == null)
-      initPool
+      jedisPool = initPool
 
     var jedis:Jedis = null
     jedis = jedisPool.getResource
@@ -80,5 +87,20 @@ private[msgpiper] class JedisSentinelMsgDeliver(conf:Map[String,Object]) extends
     jedis
   }
 
+  override def getKeys(pattern: String): Set[String] = {
+    var jedis:Jedis = null
+    try {
+      jedis = getJedis
+      import scala.collection.JavaConverters._
+      jedis.keys(pattern).asScala.toSet[String]
+    } catch {
+      case e:Exception => {
+        logError(s"get keys error! pattern: $pattern" ,e)
+        Set.empty[String]
+      }
+    } finally {
+      close(jedis)
+    }
+  }
 
 }
