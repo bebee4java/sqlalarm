@@ -11,5 +11,32 @@
 
     <artifactId>sa-core</artifactId>
 
+    <properties>
+        <scope>provided</scope>
+    </properties>
+
+
+    <dependencies>
+        <dependency>
+            <groupId>dt.sql.alarm</groupId>
+            <artifactId>sa-commons</artifactId>
+            <version>${parent.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sql_${scala.compat.version}</artifactId>
+            <version>${spark.version}</version>
+            <scope>${scope}</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sql-kafka-0-10_${scala.compat.version}</artifactId>
+            <version>${spark.version}</version>
+            <scope>${scope}</scope>
+        </dependency>
+    </dependencies>
+
 
 </project>
