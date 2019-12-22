@@ -6,7 +6,7 @@ package dt.sql.alarm.exception
   */
 class SQLAlarmException (
   val message:String,
-  val cause: Throwable) extends Exception {
+  val cause: Throwable) extends Exception(message, cause) {
 
   def this(message:String) = this(message, null)
 }

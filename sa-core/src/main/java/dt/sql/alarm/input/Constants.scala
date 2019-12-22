@@ -2,8 +2,12 @@ package dt.sql.alarm.input
 
 object Constants {
 
-  val INPUT_PREFIX = "input"
-  val OUTPUT_PREFIX = "output"
+  val SQLALARM_SOURCES = "sqlalarm.sources"
+  val SQLALARM_SINKS = "sqlalarm.sinks"
+  val SQLALARM_ALERT = "sqlalarm.alert"
+
+  val INPUT_PREFIX = "sqlalarm.input"
+  val OUTPUT_PREFIX = "sqlalarm.output"
 
   val KAFKA_TOPIC = "kafka.topic"
   val KAFKA_SUBSCRIBE_TOPIC_PATTERN = "kafka.subscribe.topic.pattern"

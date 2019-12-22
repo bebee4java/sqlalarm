@@ -13,6 +13,8 @@ import dt.sql.alarm.input.Constants.SubscribeType.SubscribeType
   */
 class KafkaInput extends BaseInput {
   @transient private var dStream:Dataset[Row] = _
+  val max_poll_records = 1000
+  val startingOffsets = "latest"
 
   override def getDataSetStream(spark: SparkSession): Dataset[Row] = {
     process(spark)
@@ -48,9 +50,9 @@ class KafkaInput extends BaseInput {
         "group.id" -> kafkaConf.group
       )
       // 默认配置
-      options += ("startingOffsets" -> "latest", "max.poll.records" -> "100")
+      options += ("startingOffsets" -> startingOffsets, "max.poll.records" -> max_poll_records.toString)
       val lines = session.readStream
-        .format("kafka")
+        .format(fullFormat)
         .options(options)
         .load()
 
@@ -58,6 +60,10 @@ class KafkaInput extends BaseInput {
     }
 
   }
+
+  def fullFormat: String = shortFormat
+
+  def shortFormat: String = "kafka"
 
   case class KafkaConf(subscribeType:SubscribeType, topic:String, servers:String, group:String) extends Conf
 }

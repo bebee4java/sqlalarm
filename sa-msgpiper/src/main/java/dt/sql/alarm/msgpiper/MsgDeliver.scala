@@ -5,8 +5,10 @@ import dt.sql.alarm.msgpiper.constants.Constants
 import dt.sql.alarm.utils.ConfigUtils
 import java.util
 
+import dt.sql.alarm.exception.SQLAlarmException
 import org.apache.commons.lang3.StringUtils
 import redis.clients.jedis.{Jedis, JedisCluster, JedisCommands}
+
 import scala.collection.JavaConverters._
 
 /**
@@ -58,7 +60,7 @@ abstract class MsgDeliver extends Serializable with Logging {
   def sendMsg(toQueue: String, msgStr: String, expireSec: Int): Int = {
     var jedis: JedisCommands = null
     try {
-      val MAX_MSG_LEN = MsgDeliver.conf.getOrElse(Constants.MSG_PIPER_MAXLENGTH, 1000000).asInstanceOf[Int]
+      val MAX_MSG_LEN = MsgDeliver.conf.getOrElse(Constants.MSG_MAXLENGTH, 1000000).asInstanceOf[Int]
       if (StringUtils.isNoneBlank(msgStr) && msgStr.length > MAX_MSG_LEN) {
         logWarning("msg is to long to send!! msg length = " + msgStr.length)
         Constants.MSG_TOO_LONG
@@ -485,9 +487,11 @@ object MsgDeliver extends Logging{
     if (msgDeliver == null ){
       this.synchronized {
         if (msgDeliver == null) {
-          val map = ConfigUtils.getAnyValue(Constants.MSG_DELIVER).asInstanceOf[util.HashMap[String,Object]]
-          conf = map.asScala.toMap
-          val clazz = map.getOrDefault(Constants.MSG_PIPER_CLASS, Constants.MSG_PIPER_DEFAULT_CLASS)
+          val config = ConfigUtils.getConfig(Constants.REDIS_DELIVER)
+          if (config == null) throw new SQLAlarmException("can not find redis config")
+          conf = ConfigUtils.config2Map(config)
+
+          val clazz = conf.getOrElse(Constants.MSG_PIPER_CLASS, Constants.MSG_PIPER_DEFAULT_CLASS)
           logInfo("init MsgDeliver by class: " + clazz)
 
           msgDeliver = Class.forName(clazz.asInstanceOf[String])

@@ -2,7 +2,7 @@ package dt.sql.alarm.msgpiper.constants
 
 object Constants {
 
-  val MSG_DELIVER = "msg-deliver"
+  val REDIS_DELIVER = "redis"
   val MSG_PIPER_CLASS = "msg.piper.class"
   val JEDIS_MINIDLE = "minidle"
   val JEDIS_MAXIDLE = "maxidle"
@@ -12,7 +12,7 @@ object Constants {
   val JEDIS_ADDRESSES = "addresses"
   val JEDIS_SENTINEL_MASTER = "sentinel.master"
   val MSG_PIPER_DEFAULT_CLASS = "dt.sql.alarm.msgpiper.single.JedisMsgDeliver"
-  val MSG_PIPER_MAXLENGTH = "msg.piper.maxlength"
+  val MSG_MAXLENGTH = "msg.maxlength"
 
   /**
     * 成功码
