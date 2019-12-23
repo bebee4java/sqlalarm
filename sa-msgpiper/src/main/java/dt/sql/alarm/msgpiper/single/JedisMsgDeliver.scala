@@ -1,6 +1,5 @@
 package dt.sql.alarm.msgpiper.single
 
-import java.util
 import dt.sql.alarm.exception.SQLAlarmException
 import dt.sql.alarm.msgpiper.MsgDeliver
 import dt.sql.alarm.msgpiper.constants.Constants
@@ -30,11 +29,11 @@ private[msgpiper] class JedisMsgDeliver(conf:Map[String,Object]) extends MsgDeli
     val password = conf.getOrElse(Constants.JEDIS_PASSWORD, null).asInstanceOf[String]
     val dbIndex = conf.getOrElse(Constants.JEDIS_DATABASE, 0).asInstanceOf[Int]
 
-    if (address == null || address.isEmpty) {
+    if (address == null || address.isEmpty || address.get.asInstanceOf[String].isEmpty) {
       throw new SQLAlarmException("redis address con't find!!!")
     }
 
-    val _address = address.get.asInstanceOf[util.ArrayList[String]]
+    val _address = address.get.asInstanceOf[String].split(",")
 
     val config: JedisPoolConfig = new JedisPoolConfig()
     config.setMinIdle(minIdle)
@@ -42,7 +41,7 @@ private[msgpiper] class JedisMsgDeliver(conf:Map[String,Object]) extends MsgDeli
     config.setMaxTotal(maxTotal)
     config.setTestWhileIdle(true)
 
-    val strs = _address.get(0).split(":", -1)
+    val strs = _address(0).split(":", -1)
     val host = strs(0)
     val port = Integer.parseInt(strs(1))
 

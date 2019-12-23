@@ -33,10 +33,10 @@ private[msgpiper] class JedisSentinelMsgDeliver(conf:Map[String,Object]) extends
     val dbIndex = conf.getOrElse(Constants.JEDIS_DATABASE, 0).asInstanceOf[Int]
     val master = conf.get(Constants.JEDIS_SENTINEL_MASTER).asInstanceOf[String]
 
-    if (address == null || address.isEmpty) {
+    if (address == null || address.isEmpty || address.get.asInstanceOf[String].isEmpty) {
       throw new SQLAlarmException("redis address con't find!!!")
     }
-    val _address = address.get.asInstanceOf[util.ArrayList[String]]
+    val _address = address.get.asInstanceOf[String].split(",")
 
     if (master == null || master.isEmpty){
       throw new SQLAlarmException("Can connect to sentinel,Master must be monitored!")
@@ -49,8 +49,7 @@ private[msgpiper] class JedisSentinelMsgDeliver(conf:Map[String,Object]) extends
     config.setTestWhileIdle(true)
 
     val sentinels = new util.HashSet[String]()
-    import scala.collection.JavaConverters._
-    for (address <- _address.asScala){
+    for (address <- _address){
       if (StringUtils.isNotBlank(address))
         sentinels.add(address)
     }
