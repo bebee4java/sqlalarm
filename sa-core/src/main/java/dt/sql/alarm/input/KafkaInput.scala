@@ -4,13 +4,15 @@ import dt.sql.alarm.utils.ConfigUtils
 import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
 import Constants._
-import dt.sql.alarm.core.Conf
+import dt.sql.alarm.core.{Conf, Source}
 import dt.sql.alarm.input.Constants.SubscribeType.SubscribeType
 
 /**
   * kafka消息输入
   * Created by songgr on 2019/12/20.
   */
+
+@Source(name = "kafka")
 class KafkaInput extends BaseInput {
   @transient private var dStream:Dataset[Row] = _
   val max_poll_records = 1000

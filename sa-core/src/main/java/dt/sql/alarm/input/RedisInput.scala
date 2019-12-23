@@ -1,13 +1,15 @@
 package dt.sql.alarm.input
-import dt.sql.alarm.core.Conf
+import dt.sql.alarm.core.{Conf, Source}
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
 
 /**
   *
   * Created by songgr on 2019/12/20.
   */
+
+@Source(name = "redis")
 class RedisInput extends BaseInput {
-  override def getDataSetStream(spark: SparkSession): Dataset[Row] = ???
+  override def getDataSetStream(spark: SparkSession): Dataset[Row] = null
 
   /**
     * 配置检查

@@ -50,6 +50,8 @@ object ConfigUtils extends Logging {
 
   def toStringMap = config2StringMap(config)
 
+  def hasConfig(path:String):Boolean = config.hasPath(path)
+
   def getConfig(path:String):Config = try {config.getConfig(path)} catch {
     case ex:Exception => null
   }
