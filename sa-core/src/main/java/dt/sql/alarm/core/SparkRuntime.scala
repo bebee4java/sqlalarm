@@ -9,7 +9,8 @@ import dt.sql.alarm.input.SourceInfo
 import Constants._
 import dt.sql.alarm.filter.SQLFilter
 import dt.sql.alarm.msgpiper.MsgDeliver
-import org.apache.spark.sql.streaming.StreamingQuery
+import dt.sql.alarm.output.SinkInfo
+import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
 
 object SparkRuntime extends Logging {
   private var sparkSession :SparkSession = null
@@ -44,22 +45,35 @@ object SparkRuntime extends Logging {
   def parseProcessAndSink(spark:SparkSession) = {
     logInfo("spark parse process and sink start...")
     val sources = getSourceTable(spark)
-
+    logInfo("spark stream get all source table succeed!")
+    sources.printSchema()
     val dStreamWriter = sources.writeStream.foreachBatch {
       (batchTable, batchId) =>
         logInfo(s"start processing batch: $batchId")
         AlarmFlow.run(batchTable){
           batchInfo =>
-            batchInfo.foreach {
+            val allTable = batchInfo.flatMap {
               case (source, topic) =>
                 val rule_rkey = AlarmRuleConf.getRkey(source, topic)
                 val rule_map = msgDeliver.getTableCache(rule_rkey)
-                rule_map.map{
+                val tables = rule_map.map{
                   case (ruleConfId, ruleConf) =>
                     val rule = AlarmRuleConf.formJson(ruleConf)
                     SQLFilter.process(rule, batchTable)
                 }
+                tables.map {
+                  df =>
+                    import spark.implicits._
+                    df.as[AlarmRecord]
+                }
             }
+            allTable.reduce(_ union _)
+        }{
+          table =>
+           getSinks.map(_.process(table))
+        } {
+          table =>
+           AlarmAlert.push(table)
         }
         logInfo(s"bath $batchId processing is done.")
     }
@@ -67,7 +81,17 @@ object SparkRuntime extends Logging {
     streamingQuery = dStreamWriter
       .queryName(ConfigUtils.getStringValue(appName))
       .option("checkpointLocation", ConfigUtils.getStringValue(checkpoint))
+      .trigger(Trigger.ProcessingTime(s"${ConfigUtils.getStringValue(trigger,"3")} seconds"))
       .start()
+  }
+
+  def getSinks = {
+    val sinks = ConfigUtils.getStringValue(SQLALARM_SINKS)
+    val sinkNames = sinks.split(",").filterNot(_.isEmpty)
+    assert(sinkNames.filterNot(SinkInfo.sinkExist(_)).size == 0,
+      s"Check the configuration of sink, at present only supported: ${SinkInfo.getAllSink}"
+    )
+    sinkNames.map(SinkInfo.getSink(_))
   }
 
   def getSourceTable(spark:SparkSession) = {
@@ -81,6 +105,7 @@ object SparkRuntime extends Logging {
 
     val sources = sourceNames.map {
       sourceName =>
+        logInfo(s"spark stream create source $sourceName!")
         SourceInfo.getSource(sourceName).getDataSetStream(spark)
     }
 

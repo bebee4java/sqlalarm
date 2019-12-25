@@ -1,5 +1,6 @@
 package dt.sql.alarm.input
-import dt.sql.alarm.core.{Conf, Source}
+import dt.sql.alarm.conf.Conf
+import dt.sql.alarm.core.Source
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
 
 /**

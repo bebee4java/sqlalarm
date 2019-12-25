@@ -14,6 +14,8 @@ object Constants {
 
   val checkpoint = "sqlalarm.checkpointLocation"
 
+  val trigger = "spark.streaming.trigger.time.interval.sec"
+
   val SQLALARM_SOURCES = "sqlalarm.sources"
   val SQLALARM_SINKS = "sqlalarm.sinks"
   val SQLALARM_ALERT = "sqlalarm.alert"

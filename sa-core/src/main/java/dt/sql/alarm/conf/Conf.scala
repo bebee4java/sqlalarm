@@ -1,4 +1,4 @@
-package dt.sql.alarm.core
+package dt.sql.alarm.conf
 
 /**
   * 配置接口

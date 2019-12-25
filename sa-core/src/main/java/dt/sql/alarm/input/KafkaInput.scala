@@ -5,8 +5,9 @@ import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
 import dt.sql.alarm.core.Constants._
 import Constants._
-import dt.sql.alarm.core.{Conf, Source}
-import dt.sql.alarm.input.Constants.SubscribeType.SubscribeType
+import dt.sql.alarm.conf.KafkaConf
+import dt.sql.alarm.core.Source
+import dt.sql.alarm.log.Logging
 
 /**
   * kafka消息输入
@@ -14,7 +15,7 @@ import dt.sql.alarm.input.Constants.SubscribeType.SubscribeType
   */
 
 @Source(name = "kafka")
-class KafkaInput extends BaseInput {
+class KafkaInput extends BaseInput with Logging {
   @transient private var dStream:Dataset[Row] = _
   val max_poll_records = 1000
   val startingOffsets = "latest"
@@ -45,6 +46,7 @@ class KafkaInput extends BaseInput {
   }
 
   override protected[this] def process(session: SparkSession) = {
+    logInfo("Alarm kafka source process....")
     val conf = checkConfig
     if (conf.isDefined) {
       val kafkaConf = conf.get
@@ -60,6 +62,7 @@ class KafkaInput extends BaseInput {
         .load()
 
       dStream = lines.selectExpr(s"'${shortFormat}' as ${source}", s"${topic}", s"CAST(value AS STRING) as ${value}")
+      logInfo("Alarm kafka source process over!")
     }
 
   }
@@ -68,5 +71,4 @@ class KafkaInput extends BaseInput {
 
   def shortFormat: String = "kafka"
 
-  case class KafkaConf(subscribeType:SubscribeType, topic:String, servers:String, group:String) extends Conf
 }

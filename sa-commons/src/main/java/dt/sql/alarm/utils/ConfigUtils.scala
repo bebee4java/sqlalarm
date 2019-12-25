@@ -12,6 +12,7 @@ object ConfigUtils extends Logging {
   var config:Config = _
   try {
     val url = this.getClass.getClassLoader.getResource("application.conf")
+    logInfo("ConfigUtils load file: " + url.getFile)
     if (url != null) {
       // 默认读取resources目录下的application.conf文件
       config = ConfigFactory.parseURL(url)
@@ -27,6 +28,7 @@ object ConfigUtils extends Logging {
     val tempMap = (map.keySet -- getKeys).map(k => (k, map.get(k).get)).toMap
     val unionMap = toMap ++ tempMap
     config = ConfigFactory.parseMap(unionMap)
+    logInfo("ConfigUtils build configuration succeed!")
   }
   
   def getConfigKeys(config: Config):Set[String] = {
@@ -108,5 +110,21 @@ object ConfigUtils extends Logging {
     } else {
       null
     }
+  }
+
+  def showConf(conf: Map[String, String] = toStringMap) {
+    val keyLength = conf.keys.map(_.size).max
+    val valueLength = conf.values.map(_.size).max
+    val header = "-" * (keyLength + valueLength + 3)
+    logInfo(header)
+    conf.map {
+      case (key, value) =>
+        val keyStr = key + (" " * (keyLength - key.size))
+        val valueStr = value + (" " * (valueLength - value.size))
+        s"|${keyStr}|${valueStr}|"
+    }.foreach(line => {
+      logInfo(line)
+    })
+    logInfo(header)
   }
 }
