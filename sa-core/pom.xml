@@ -24,6 +24,12 @@
         </dependency>
 
         <dependency>
+            <groupId>dt.sql.alarm</groupId>
+            <artifactId>sa-msgpiper</artifactId>
+            <version>${parent.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.reflections</groupId>
             <artifactId>reflections</artifactId>
             <version>0.9.11</version>

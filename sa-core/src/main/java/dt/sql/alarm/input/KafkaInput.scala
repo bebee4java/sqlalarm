@@ -3,6 +3,7 @@ import dt.sql.alarm.exception.SQLAlarmException
 import dt.sql.alarm.utils.ConfigUtils
 import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
+import dt.sql.alarm.core.Constants._
 import Constants._
 import dt.sql.alarm.core.{Conf, Source}
 import dt.sql.alarm.input.Constants.SubscribeType.SubscribeType
@@ -58,7 +59,7 @@ class KafkaInput extends BaseInput {
         .options(options)
         .load()
 
-      dStream = lines.selectExpr("topic", "CAST(value AS STRING) as value")
+      dStream = lines.selectExpr(s"'${shortFormat}' as ${source}", s"${topic}", s"CAST(value AS STRING) as ${value}")
     }
 
   }
