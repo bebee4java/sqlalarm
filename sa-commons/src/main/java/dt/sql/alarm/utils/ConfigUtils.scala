@@ -71,6 +71,12 @@ object ConfigUtils extends Logging {
 
   def getIntValue(path:String): Int = getIntValue(path, 0)
 
+  def getLongValue(path:String, default: Long): Long = try {config.getLong(path)} catch {
+    case ex:Exception => default
+  }
+
+  def getLongValue(path:String) :Long = getLongValue(path, 0L)
+
   def getDoubleValue(path:String, default: Double): Double = try {config.getDouble(path)} catch {
     case ex:Exception => default
   }

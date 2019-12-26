@@ -81,7 +81,7 @@ object SparkRuntime extends Logging {
     streamingQuery = dStreamWriter
       .queryName(ConfigUtils.getStringValue(appName))
       .option("checkpointLocation", ConfigUtils.getStringValue(checkpoint))
-      .trigger(Trigger.ProcessingTime(s"${ConfigUtils.getStringValue(trigger,"3")} seconds"))
+      .trigger(Trigger.ProcessingTime(ConfigUtils.getLongValue(trigger, 3000L))) // 默认3s
       .start()
   }
 
