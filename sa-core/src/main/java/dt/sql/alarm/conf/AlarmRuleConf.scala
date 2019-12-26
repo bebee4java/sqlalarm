@@ -3,7 +3,7 @@ package dt.sql.alarm.conf
 import dt.sql.alarm.core.Constants.ALARM_RULE
 import dt.sql.alarm.utils.JacksonUtil
 
-case class AlarmRuleConf(platform:String, title:String, source:Source, filter:Filter)
+case class AlarmRuleConf(item_id:String, platform:String, title:String, source:Source, filter:Filter)
 case class Source(`type`:String, topic:String)
 case class Filter(table:String, structure:Array[Field], sql:String)
 case class Field(name:String, `type`:String, xpath:String)
@@ -19,7 +19,7 @@ object AlarmRuleConf {
 
 
   def main(args: Array[String]): Unit = {
-    println(prettyString(AlarmRuleConf("alarm","sql alarm",
+    println(prettyString(AlarmRuleConf("1222","alarm","sql alarm",
       Source("kafka", "sqlalarm_event"),
         Filter("error_job",
           Array(Field("job_id","string","$.jobid")),
@@ -27,10 +27,12 @@ object AlarmRuleConf {
         )
       )
     ))
+
   }
 
   /*
   {
+    "item_id" : "1222",
     "platform" : "alarm",
     "title" : "sql alarm",
     "source" : {
