@@ -23,8 +23,8 @@ object Constants {
   val INPUT_PREFIX = "sqlalarm.input"
   val OUTPUT_PREFIX = "sqlalarm.output"
 
-  val ALARM_RULE = "sql.alarm.rule"
-  val ALARM_CACHE = "sql.alarm.cache"
-  val ALARM_POLICY = "sql.alarm.policy"
+  val ALARM_RULE = "sqlalarm_rule"
+  val ALARM_CACHE = "sqlalarm_cache"
+  val ALARM_POLICY = "sqlalarm_policy"
 
 }

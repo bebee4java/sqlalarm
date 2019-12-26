@@ -18,6 +18,6 @@ object Constants {
 
   val KAFKA_SERVERS = "kafka.bootstrap.servers"
   val KAFKA_GROUP = "kafka.group"
-  val KAFKA_DEFAULT_GROUP = "sql.alarm.group"
+  val KAFKA_DEFAULT_GROUP = "sqlalarm_group"
 
 }

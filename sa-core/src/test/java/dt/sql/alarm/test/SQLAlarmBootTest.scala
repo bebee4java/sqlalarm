@@ -15,9 +15,9 @@ object SQLAlarmBootTest {
         "-sqlalarm.input.kafka.topic", "sqlalarm_event",
         "-sqlalarm.input.kafka.subscribe.topic.pattern", "1",
         "-sqlalarm.input.kafka.bootstrap.servers", "127.0.0.1:9092",
-        "-sqlalarm.sinks", "console,kafka",
-        "-sqlalarm.input.kafka.topic", "sqlalarm_output",
-        "-sqlalarm.input.kafka.bootstrap.servers", "127.0.0.1:9092",
+        "-sqlalarm.sinks", "console",
+        "-sqlalarm.output.kafka.topic", "sqlalarm_output",
+        "-sqlalarm.output.kafka.bootstrap.servers", "127.0.0.1:9092",
 
         "sqlalarm.alert.pigeonApi", "https://dt.sqlclub/api/pigeon"
 
