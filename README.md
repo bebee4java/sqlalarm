@@ -101,6 +101,6 @@ kafka-console-producer.sh --broker-list localhost:9092 --topic  sqlalarm_event
     "job_time":"2019-12-26 12:00:00"
 }
 ```
-5. If use console sink, you will get info:
+5. If use console sink, you will get following info in the console:
 ![alarm-console-sink](docs/alarm-console-sink.jpg)
 
