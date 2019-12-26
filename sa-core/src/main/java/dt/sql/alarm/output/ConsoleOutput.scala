@@ -6,7 +6,7 @@ import org.apache.spark.sql.{Dataset, SparkSession}
 
 
 @Sink(name = "console")
-object ConsoleOutput extends BaseOutput with Logging {
+class ConsoleOutput extends BaseOutput with Logging {
   var runtimeConfig:Map[String,String] = _
 
   override protected[this] def checkConfig(): Option[Conf] = None
@@ -17,6 +17,7 @@ object ConsoleOutput extends BaseOutput with Logging {
   }
 
   override def process(data: Dataset[AlarmRecord]): Unit = {
+    process(data.sparkSession)
     logInfo("Alarm console sink process....")
     val numRows = runtimeConfig.getOrElse(Constants.showNumRows, "20")
     val truncate = runtimeConfig.getOrElse(Constants.showTruncate, "true")
