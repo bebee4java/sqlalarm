@@ -20,7 +20,7 @@ object SQLFilter extends Logging {
     val source_ = ruleConf.source
     val structures = ruleConf.filter.structure
     val tableName = ruleConf.filter.table
-    val sql = ruleConf.filter.sql
+    val sql = ruleConf.filter.sql.trim
 
     val fields = structures.map{
       field =>

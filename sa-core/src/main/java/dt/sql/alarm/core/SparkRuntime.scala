@@ -67,7 +67,12 @@ object SparkRuntime extends Logging {
                     df.as[AlarmRecord]
                 }
             }
-            allTable.reduce(_ union _)
+            if (allTable.nonEmpty) {
+              val unionTable = allTable.reduce(_ union _)
+              scala.Some(unionTable)
+            } else {
+              None
+            }
         }{
           table =>
            getSinks.map(_.process(table))
@@ -88,6 +93,7 @@ object SparkRuntime extends Logging {
   def getSinks = {
     val sinks = ConfigUtils.getStringValue(SQLALARM_SINKS)
     val sinkNames = sinks.split(",").filterNot(_.isEmpty)
+
     assert(sinkNames.filterNot(SinkInfo.sinkExist(_)).size == 0,
       s"Check the configuration of sink, at present only supported: ${SinkInfo.getAllSink}"
     )
