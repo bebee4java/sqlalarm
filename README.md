@@ -11,13 +11,13 @@ The integral framework idea is as follows:
 
 Introduce of modules:
 1. sa-admin: web console and rest api for sqlalarm
-2. sa-core: core module of sqlalarm
+2. sa-core: core module of sqlalarm(including source/filter/sink(alert))
 
 ### Developing SQLAlarm
 You can use bin/start-local.sh to start a local SQLAlarm serve. We recommend to run it use yarn-client or local mode in spark cluster after packaging jar.
 
 Minimal requirements for a SQLAlarm serve are:
-- java 1.8 + 
+- Java 1.8 + 
 - Spark 2.4.x
 - Redis (Redis 5.0, if use Redis Stream)
 - Kafka (this is also needless if you only use Redis Stream for event alerts)
