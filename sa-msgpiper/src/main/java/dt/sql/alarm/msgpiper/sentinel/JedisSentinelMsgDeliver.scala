@@ -25,12 +25,12 @@ private[msgpiper] class JedisSentinelMsgDeliver(conf:Map[String,Object]) extends
       jedisPool = null
     }
     logInfo("JedisPool init....")
-    val minIdle = conf.getOrElse(Constants.JEDIS_MINIDLE, 5).asInstanceOf[Int]
-    val maxIdle = conf.getOrElse(Constants.JEDIS_MAXIDLE, 10).asInstanceOf[Int]
-    val maxTotal = conf.getOrElse(Constants.JEDIS_MAXTOTAL, 30).asInstanceOf[Int]
+    val minIdle = conf.getOrElse(Constants.JEDIS_MINIDLE, 5)
+    val maxIdle = conf.getOrElse(Constants.JEDIS_MAXIDLE, 10)
+    val maxTotal = conf.getOrElse(Constants.JEDIS_MAXTOTAL, 30)
     val address = conf.get(Constants.JEDIS_ADDRESSES)
     val password = conf.getOrElse(Constants.JEDIS_PASSWORD, null).asInstanceOf[String]
-    val dbIndex = conf.getOrElse(Constants.JEDIS_DATABASE, 0).asInstanceOf[Int]
+    val dbIndex = conf.getOrElse(Constants.JEDIS_DATABASE, 0)
     val master = conf.get(Constants.JEDIS_SENTINEL_MASTER).asInstanceOf[String]
 
     if (address == null || address.isEmpty || address.get.asInstanceOf[String].isEmpty) {
@@ -43,9 +43,9 @@ private[msgpiper] class JedisSentinelMsgDeliver(conf:Map[String,Object]) extends
     }
 
     val config:JedisPoolConfig = new JedisPoolConfig()
-    config.setMinIdle(minIdle)
-    config.setMaxIdle(maxIdle)
-    config.setMaxTotal(maxTotal)
+    config.setMinIdle(Integer.valueOf(minIdle.toString))
+    config.setMaxIdle(Integer.valueOf(maxIdle.toString))
+    config.setMaxTotal(Integer.valueOf(maxTotal.toString))
     config.setTestWhileIdle(true)
 
     val sentinels = new util.HashSet[String]()
@@ -54,7 +54,7 @@ private[msgpiper] class JedisSentinelMsgDeliver(conf:Map[String,Object]) extends
         sentinels.add(address)
     }
 
-    val pool = new JedisSentinelPool(master, sentinels, config, TIMEOUT, password, dbIndex)
+    val pool = new JedisSentinelPool(master, sentinels, config, TIMEOUT, password, Integer.valueOf(dbIndex.toString))
     logInfo("JedisSentinelMsgDeliver create jedisPool succeed!")
     pool
   }

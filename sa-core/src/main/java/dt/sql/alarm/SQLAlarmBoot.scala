@@ -1,6 +1,6 @@
 package dt.sql.alarm
 
-import dt.sql.alarm.core.SparkRuntime
+import dt.sql.alarm.core.{AlarmFlow, SparkRuntime}
 import core.Constants._
 import dt.sql.alarm.utils.{ConfigUtils, ParamsUtils}
 
@@ -25,6 +25,10 @@ object SQLAlarmBoot {
 
     if ( SparkRuntime.streamingQuery != null )
       SparkRuntime.streamingQuery.awaitTermination()
+
+    if (!spark.sparkContext.isStopped) spark.sparkContext.stop()
+
+    if (spark.sparkContext.isStopped) AlarmFlow.destroy
 
   }
 

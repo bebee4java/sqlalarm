@@ -55,7 +55,7 @@ class KafkaInput extends BaseInput with Logging {
         "group.id" -> kafkaConf.group
       )
       // 默认配置
-      options += ("startingOffsets" -> startingOffsets, "max.poll.records" -> max_poll_records.toString)
+      options += ("startingOffsets" -> startingOffsets, "max.poll.records" -> max_poll_records.toString, "failOnDataLoss" -> "false")
       val lines = session.readStream
         .format(fullFormat)
         .options(options)

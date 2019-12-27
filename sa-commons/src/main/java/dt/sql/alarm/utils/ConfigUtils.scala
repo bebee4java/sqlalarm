@@ -25,8 +25,8 @@ object ConfigUtils extends Logging {
   }
 
   def configBuilder(map : Map[String, Object]) = {
-    val tempMap = (map.keySet -- getKeys).map(k => (k, map.get(k).get)).toMap
-    val unionMap = toMap ++ tempMap
+    val tempMap = (getKeys -- map.keySet).map(k => (k, getAnyValue(k))).toMap
+    val unionMap = map ++ tempMap
     config = ConfigFactory.parseMap(unionMap)
     logInfo("ConfigUtils build configuration succeed!")
   }

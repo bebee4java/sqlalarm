@@ -20,7 +20,7 @@ object AlarmRuleConf {
 
   def main(args: Array[String]): Unit = {
     println(prettyString(AlarmRuleConf("1222","alarm","sql alarm",
-      Source("kafka", "sqlalarm_event"),
+      Source("kafka", " sqlalarm_event"),
         Filter("error_job",
           Array(Field("job_id","string","$.jobid")),
           "select jobid from sqlalarm_event"
@@ -37,7 +37,7 @@ object AlarmRuleConf {
     "title" : "sql alarm",
     "source" : {
       "type" : "kafka",
-      "topic" : "sqlalarm_event"
+      "topic" : " sqlalarm_event"
     },
     "filter" : {
       "table" : "error_job",
