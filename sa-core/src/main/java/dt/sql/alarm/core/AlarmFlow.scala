@@ -13,6 +13,8 @@ object AlarmFlow extends Logging{
   val taskNum = 2
   lazy private val executors = Executors.newFixedThreadPool(taskNum)
   lazy private val taskList = new util.ArrayList[Future[Unit]](taskNum)
+  lazy private val taskTimeOut = SparkRuntime.sparkConfMap.getOrElse(futureTaskTimeOut,
+    ConfigUtils.getStringValue(futureTaskTimeOut, "300000")).toLong // Default timeout 5 min
 
   def run(data:Dataset[Row])
          (filterFunc: Array[(String,String)] => Option[Dataset[AlarmRecord]])
@@ -80,9 +82,9 @@ object AlarmFlow extends Logging{
 
   def runTask( task:Future[Unit] ): Boolean = {
     if (task != null && !task.isDone) {
-      // Default timeout 5 min
+
       try {
-        task.get(ConfigUtils.getLongValue(futureTaskTimeOut, 300000L), TimeUnit.MILLISECONDS)
+        task.get(taskTimeOut, TimeUnit.MILLISECONDS)
       } catch {
         case e if e.isInstanceOf[InterruptedException] || e.isInstanceOf[ExecutionException] =>
           logError(e.getMessage, e)

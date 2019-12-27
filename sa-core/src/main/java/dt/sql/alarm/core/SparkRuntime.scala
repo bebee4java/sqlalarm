@@ -14,6 +14,7 @@ import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
 
 object SparkRuntime extends Logging {
   private var sparkSession :SparkSession = null
+  var sparkConfMap:Map[String,String] = null
   var streamingQuery:StreamingQuery = null
   lazy val msgDeliver = MsgDeliver.getInstance
 
@@ -35,6 +36,7 @@ object SparkRuntime extends Logging {
             conf.setMaster(ConfigUtils.getStringValue(master))
           }
           sparkSession = SparkSession.builder().config(conf).getOrCreate()
+          sparkConfMap = sparkSession.conf.getAll
           logInfo("Spark Runtime created!!!")
         }
       }
@@ -75,7 +77,7 @@ object SparkRuntime extends Logging {
             }
         }{
           table =>
-           getSinks.map(_.process(table))
+            sinks.map(_.process(table))
         } {
           table =>
            AlarmAlert.push(table)
@@ -86,9 +88,12 @@ object SparkRuntime extends Logging {
     streamingQuery = dStreamWriter
       .queryName(ConfigUtils.getStringValue(appName))
       .option("checkpointLocation", ConfigUtils.getStringValue(checkpoint))
-      .trigger(Trigger.ProcessingTime(ConfigUtils.getLongValue(trigger, 3000L))) // 默认3s
+      .trigger(Trigger.ProcessingTime(sparkConfMap.getOrElse(trigger,
+        ConfigUtils.getStringValue(trigger, "3000")).toLong)) // 默认3s
       .start()
   }
+
+  private lazy val sinks = getSinks
 
   def getSinks = {
     val sinks = ConfigUtils.getStringValue(SQLALARM_SINKS)
