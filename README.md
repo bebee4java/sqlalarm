@@ -3,8 +3,8 @@
 
 SQLAlarm is for event(time-stamped) alarm which is built on spark structured-steaming. This system including following abilities:
 1. Event filtering through SQL
-2. Alarm record noise reduction
-3. Alarm record dispatch in specified channels
+2. Alarm records noise reduction
+3. Alarm records dispatch in specified channels
 
 The integral framework idea is as follows:
 ![sqlalarm](docs/sqlalarm.png)
@@ -85,14 +85,21 @@ HSET "sqlalarm_rule:kafka:sqlalarm_event" "uuid00000001"
     }
 }
 ```
-4. Wait for event center(may be kafka or redis) produce alarm event. Produce manually:
-> 1.create topic: 
+4. Wait for event center(may be kafka or redis) produce alarm events. Produce manually:
+> 1.create if not exists topic: 
 ```bash
 kafka-topics.sh --create --bootstrap-server localhost:9092 --replication-factor 1 --partitions 1 --topic sqlalarm_event
 ```
-> 2.produce event: 
+> 2.produce events: 
 ```bash
 kafka-console-producer.sh --broker-list localhost:9092 --topic sqlalarm_event
+
+{
+    "job_name":"sqlalarm_job_000",
+    "job_owner":"bebee4java",
+    "job_stat":"Succeed",
+    "job_time":"2019-12-26 12:00:00"
+}
 
 {
     "job_name":"sqlalarm_job_001",
@@ -101,10 +108,10 @@ kafka-console-producer.sh --broker-list localhost:9092 --topic sqlalarm_event
     "job_time":"2019-12-26 12:00:00"
 }
 ```
-5. If use console sink, you will get following info in the console:
+5. If use console sink, you will get following info in the console(Observable the fail events are filtered out and succeed events are ignored):
 ![alarm-console-sink](docs/alarm-console-sink.jpg)
 
-> **notes:** the order of step 2&3 is not required, and the alert rule is not necessary when starting the SQLAlarm serve.
+> **notes:** the order of step 2&3 is not required, and the alarm rule is not necessary when starting the SQLAlarm serve.
  
 ### Features
 1. Supports docking multiple data sources as event center(kafka or redis stream-enabled source), and it's scalable you can customize the data source only extends the class [BaseInput](sa-core/src/main/java/dt/sql/alarm/input/BaseInput.scala)
@@ -113,7 +120,7 @@ kafka-console-producer.sh --broker-list localhost:9092 --topic sqlalarm_event
 4. Supports alarm filtering for events through SQL
 5. Supports multiple policies(time merge/time window+N counts merge) for alarm noise reduction
 6. Supports alarm rules and policies to take effect dynamically without restarting the serve
-7. Supports adding data source topics dynamically(if your subscription mode is `subscribePattern`)
+7. Supports adding data source topics dynamically(If your subscription mode is `subscribePattern`)
 8. Supports sending alarm records by specific different channels
 
 ### Fork and Contribute
