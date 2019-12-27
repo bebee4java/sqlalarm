@@ -1,7 +1,7 @@
 ## SQLAlarm
 > Big data smart alarm by sql
 
-SQLAlarm is for event alarm which is built on spark structured-steaming. This system including following abilities:
+SQLAlarm is for event(time-stamped) alarm which is built on spark structured-steaming. This system including following abilities:
 1. Event filtering through SQL
 2. Alarm record noise reduction
 3. Alarm record dispatch in specified channels
@@ -14,7 +14,7 @@ Introduce of modules:
 2. sa-core: core module of sqlalarm(including source/filter/sink(alert))
 
 ### Developing SQLAlarm
-You can use bin/start-local.sh to start a local SQLAlarm serve. We recommend to run it use yarn-client or local mode in spark cluster after packaging jar.
+You can use bin/start-local.sh to start a local SQLAlarm serve at IntelliJ IDEA. We recommend to run it use yarn-client or local mode in spark cluster after packaged jar.
 
 Minimal requirements for a SQLAlarm serve are:
 - Java 1.8 + 
@@ -36,7 +36,7 @@ spark-submit --class dt.sql.alarm.SQLAlarmBoot \
         -redis.addresses "127.0.0.1:6379" \
         -redis.database 4 \
         -sqlalarm.sources kafka \
-        -sqlalarm.input.kafka.topic  sqlalarm_event \
+        -sqlalarm.input.kafka.topic sqlalarm_event \
         -sqlalarm.input.kafka.subscribe.topic.pattern 1 \
         -sqlalarm.input.kafka.bootstrap.servers "127.0.0.1:9092" \
         -sqlalarm.sinks console
@@ -44,18 +44,18 @@ spark-submit --class dt.sql.alarm.SQLAlarmBoot \
 > notes: the above simple example takes kafka as the message center, filtering alarm event and output to the console.
 
 ### Quick Start
-1. Packaged the jar: sa-core-1.0-SNAPSHOT.jar.
+1. Packaged the core jar: sa-core-1.0-SNAPSHOT.jar.
 2. Deploy the jar package in spark cluster.
 3. Add an alarm rule(put at redis): 
 ```bash
-HSET "sql.alarm.rule:kafka: sqlalarm_event" "uuid00000001" 
+HSET "sqlalarm_rule:kafka:sqlalarm_event" "uuid00000001" 
 {
     "item_id":"uuid00000001",
     "platform":"alarm",
     "title":"sql alarm test",
     "source":{
         "type":"kafka",
-        "topic":" sqlalarm_event"
+        "topic":"sqlalarm_event"
     },
     "filter":{
         "table":"fail_job",
@@ -88,11 +88,11 @@ HSET "sql.alarm.rule:kafka: sqlalarm_event" "uuid00000001"
 4. Wait for event center(may be kafka or redis) produce alarm event. Produce manually:
 > 1.create topic: 
 ```bash
-kafka-topics.sh --create --bootstrap-server localhost:9092 --replication-factor 1 --partitions 1 --topic  sqlalarm_event
+kafka-topics.sh --create --bootstrap-server localhost:9092 --replication-factor 1 --partitions 1 --topic sqlalarm_event
 ```
 > 2.produce event: 
 ```bash
-kafka-console-producer.sh --broker-list localhost:9092 --topic  sqlalarm_event
+kafka-console-producer.sh --broker-list localhost:9092 --topic sqlalarm_event
 
 {
     "job_name":"sqlalarm_job_001",
@@ -104,3 +104,17 @@ kafka-console-producer.sh --broker-list localhost:9092 --topic  sqlalarm_event
 5. If use console sink, you will get following info in the console:
 ![alarm-console-sink](docs/alarm-console-sink.jpg)
 
+> **notes:** the order of step 2&3 is not required, and the alert rule is not necessary when starting the SQLAlarm serve.
+ 
+### Features
+1. Supports docking multiple data sources as event center(kafka or redis stream-enabled source), and it's scalable you can customize the data source only extends the class [BaseInput](sa-core/src/main/java/dt/sql/alarm/input/BaseInput.scala)
+2. Supports docking multiple data topics with inconsistent structure
+3. Supports output of alarm events to multiple sinks(kafka/jdbc/es etc.), and it's scalable you can customize the data sink only extends the class [BaseOutput](sa-core/src/main/java/dt/sql/alarm/output/BaseOutput.scala)
+4. Supports alarm filtering for events through SQL
+5. Supports multiple policies(time merge/time window+N counts merge) for alarm noise reduction
+6. Supports alarm rules and policies to take effect dynamically without restarting the serve
+7. Supports adding data source topics dynamically(if your subscription mode is `subscribePattern`)
+8. Supports sending alarm records by specific different channels
+
+### Fork and Contribute
+This is an active open-source project. We are always open to people who want to use the system or contribute to it. Contact us if you are looking for implementation tasks that fit your skills.
