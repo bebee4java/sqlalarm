@@ -123,5 +123,9 @@ kafka-console-producer.sh --broker-list localhost:9092 --topic sqlalarm_event
 7. Supports adding data source topics dynamically(If your subscription mode is `subscribePattern`)
 8. Supports sending alarm records by specific different channels
 
+### Documentation
+The documentation of SQLAlarm is located on the issues page: [SQLAlarm issues](https://github.com/bebee4java/sqlalarm/issues).
+It contains a lot of information such as [configuration](https://github.com/bebee4java/sqlalarm/issues/2) and use tutorial etc. If you have any questions, please free to commit issues.
+
 ### Fork and Contribute
 This is an active open-source project. We are always open to people who want to use the system or contribute to it. Contact us if you are looking for implementation tasks that fit your skills.
