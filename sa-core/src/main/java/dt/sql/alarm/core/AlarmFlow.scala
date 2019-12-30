@@ -5,8 +5,8 @@ import java.util
 
 import Constants._
 import dt.sql.alarm.core.Constants.{SQLALARM_ALERT, source, topic}
-import dt.sql.alarm.log.Logging
-import dt.sql.alarm.utils.ConfigUtils
+import tech.sqlclub.common.log.Logging
+import tech.sqlclub.common.utils.ConfigUtils
 import org.apache.spark.sql.{Dataset, Row}
 
 object AlarmFlow extends Logging{

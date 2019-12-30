@@ -3,8 +3,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import dt.sql.alarm.conf.Conf
 import dt.sql.alarm.core.{AlarmRecord, Sink}
-import dt.sql.alarm.log.Logging
-import dt.sql.alarm.utils.ConfigUtils
+import tech.sqlclub.common.log.Logging
+import tech.sqlclub.common.utils.ConfigUtils
 import org.apache.spark.sql.{Dataset, SparkSession}
 
 

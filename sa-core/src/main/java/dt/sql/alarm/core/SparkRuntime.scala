@@ -1,22 +1,21 @@
 package dt.sql.alarm.core
 
 import dt.sql.alarm.conf.AlarmRuleConf
-import dt.sql.alarm.log.Logging
-import dt.sql.alarm.utils.ConfigUtils
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import dt.sql.alarm.input.SourceInfo
 import Constants._
 import dt.sql.alarm.filter.SQLFilter
-import dt.sql.alarm.msgpiper.MsgDeliver
 import dt.sql.alarm.output.SinkInfo
+import org.apache.spark.rdd.RDD
+import tech.sqlclub.common.log.Logging
+import tech.sqlclub.common.utils.ConfigUtils
 import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
 
 object SparkRuntime extends Logging {
   private var sparkSession :SparkSession = null
   var sparkConfMap:Map[String,String] = null
   var streamingQuery:StreamingQuery = null
-  lazy val msgDeliver = MsgDeliver.getInstance
 
   def getSparkSession:SparkSession = {
     if (sparkSession == null) {
@@ -57,7 +56,7 @@ object SparkRuntime extends Logging {
             val allTable = batchInfo.flatMap {
               case (source, topic) =>
                 val rule_rkey = AlarmRuleConf.getRkey(source, topic)
-                val rule_map = msgDeliver.getTableCache(rule_rkey)
+                val rule_map = RedisOperations.getTableCache(Array(rule_rkey)).collect()
                 val tables = rule_map.map{
                   case (ruleConfId, ruleConf) =>
                     val rule = AlarmRuleConf.formJson(ruleConf)
@@ -122,4 +121,35 @@ object SparkRuntime extends Logging {
 
     sources.filter(_ != null).reduce(_ union _)
   }
+}
+
+object RedisOperations {
+  import redis.clients.jedis.Jedis
+  import com.redislabs.provider.redis._
+  import com.redislabs.provider.redis.util.ConnectionUtils
+  lazy private val sc = SparkRuntime.getSparkSession.sparkContext
+
+  lazy private val redisEndpoint = RedisConfig.fromSparkConf(sc.getConf).initialHost
+
+  def getTableCache[T](keysOrKeyPattern: T):RDD[(String, String)] = {
+    sc.fromRedisHash(keysOrKeyPattern)
+  }
+
+  def getTableCache(key: String, field:String)
+    (implicit conn:Jedis = redisEndpoint.connect()):String = {
+    ConnectionUtils.withConnection[String](conn) {
+      conn =>
+        conn.hget(key, field)
+    }
+  }
+
+
+  def addTableCache(key: String, field: String, value: String)
+    (implicit conn:Jedis = redisEndpoint.connect()): Long = {
+    ConnectionUtils.withConnection[Long](conn) {
+      conn =>
+        conn.hset(key, field, value)
+    }
+  }
+
 }

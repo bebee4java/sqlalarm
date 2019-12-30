@@ -2,7 +2,7 @@ package dt.sql.alarm
 
 import dt.sql.alarm.core.{AlarmFlow, SparkRuntime}
 import core.Constants._
-import dt.sql.alarm.utils.{ConfigUtils, ParamsUtils}
+import tech.sqlclub.common.utils.{ConfigUtils, ParamsUtils}
 
 object SQLAlarmBoot {
 
@@ -17,7 +17,6 @@ object SQLAlarmBoot {
     require(ConfigUtils.hasConfig(SQLALARM_SINKS), s"SQLAlarm stream $SQLALARM_SINKS must be set")
     require(ConfigUtils.hasConfig(INPUT_PREFIX), s"SQLAlarm stream $INPUT_PREFIX must be set")
     require(ConfigUtils.hasConfig(OUTPUT_PREFIX), s"SQLAlarm stream $OUTPUT_PREFIX must be set")
-    require(ConfigUtils.hasConfig(msgpiper.constants.Constants.REDIS_DELIVER), s"SQLAlarm stream ${msgpiper.constants.Constants.REDIS_DELIVER} must be set")
 
     val spark = SparkRuntime.getSparkSession
 

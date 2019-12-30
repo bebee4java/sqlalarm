@@ -1,7 +1,7 @@
 package dt.sql.alarm.conf
 
 import dt.sql.alarm.core.Constants.ALARM_RULE
-import dt.sql.alarm.utils.JacksonUtil
+import tech.sqlclub.common.utils.JacksonUtil
 
 case class AlarmRuleConf(item_id:String, platform:String, title:String, source:Source, filter:Filter)
 case class Source(`type`:String, topic:String)

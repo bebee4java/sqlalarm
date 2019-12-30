@@ -2,11 +2,11 @@ package dt.sql.alarm.filter
 
 import dt.sql.alarm.conf.AlarmRuleConf
 import dt.sql.alarm.core.AlarmRecord._
-import dt.sql.alarm.log.Logging
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import dt.sql.alarm.core.Constants._
-import dt.sql.alarm.exception.SQLAlarmException
+import tech.sqlclub.common.exception.SQLClubException
+import tech.sqlclub.common.log.Logging
 import org.apache.spark.sql.types.{MapType, StringType}
 
 object SQLFilter extends Logging {
@@ -51,7 +51,7 @@ object SQLFilter extends Logging {
     }
 
     val ck = checkSQLSyntax(sql)
-    if (!ck._1) throw new SQLAlarmException(s"input filter sql error! item_id: ${ruleConf.item_id}"+ ".sql:\n" + sql + " .\n\n" + ck._2)
+    if (!ck._1) throw new SQLClubException(s"input filter sql error! item_id: ${ruleConf.item_id}"+ ".sql:\n" + sql + " .\n\n" + ck._2)
 
     logInfo(s"input ruleConf:[source:${source_.`type`}, topic:$topic, tableName:$tableName] exec SQL: $sql")
 
@@ -63,7 +63,7 @@ object SQLFilter extends Logging {
 
     if(!b){
       logError("exec sql output cols must contains col list: " + requireCols)
-      throw new SQLAlarmException("exec sql output cols error! find cols: [" + sqlCols.mkString(",") + "],requires: [" + requireCols.mkString(",") + "]!")
+      throw new SQLClubException("exec sql output cols error! find cols: [" + sqlCols.mkString(",") + "],requires: [" + requireCols.mkString(",") + "]!")
     }
 
 
@@ -83,7 +83,7 @@ object SQLFilter extends Logging {
     }
 
     if (schemack.filterNot(_ == true).nonEmpty){
-      throw new SQLAlarmException(s"the filter sql exec result schema error!item_id: ${ruleConf.item_id}, schema: ${result.schema}")
+      throw new SQLClubException(s"the filter sql exec result schema error!item_id: ${ruleConf.item_id}, schema: ${result.schema}")
     }
 
     result

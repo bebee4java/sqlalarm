@@ -9,9 +9,7 @@
     <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
     <modules>
-        <module>sa-commons</module>
         <module>sa-core</module>
-        <module>sa-msgpiper</module>
         <module>sa-admin</module>
     </modules>
 
@@ -52,6 +50,7 @@
 
         <spark.version>2.4.3</spark.version>
         <spark.bigversion>2.4</spark.bigversion>
+        <common-utils-version>1.0.0-SNAPSHOT</common-utils-version>
     </properties>
 
 
@@ -66,6 +65,11 @@
             <artifactId>scalatest_${scala.compat.version}</artifactId>
             <version>3.0.0</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>tech.sqlclub</groupId>
+            <artifactId>common-utils</artifactId>
+            <version>${common-utils-version}</version>
         </dependency>
 
         <!--<dependency>

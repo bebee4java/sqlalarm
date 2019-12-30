@@ -1,6 +1,6 @@
 package dt.sql.alarm.core
 
-import dt.sql.alarm.log.Logging
+import tech.sqlclub.common.log.Logging
 import org.apache.spark.sql.Dataset
 
 /**
