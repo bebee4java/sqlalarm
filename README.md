@@ -31,10 +31,11 @@ spark-submit --class dt.sql.alarm.SQLAlarmBoot \
         --conf "spark.kryoserializer.buffer=256k" \
         --conf "spark.kryoserializer.buffer.max=1024m" \
         --conf "spark.serializer=org.apache.spark.serializer.KryoSerializer" \
+        --conf "spark.redis.host=127.0.0.1" \
+        --conf "spark.redis.port=6379" \
+        --conf "spark.redis.db=4" \
         sa-core-1.0-SNAPSHOT.jar \
         -sqlalarm.name sqlalarm \
-        -redis.addresses "127.0.0.1:6379" \
-        -redis.database 4 \
         -sqlalarm.sources kafka \
         -sqlalarm.input.kafka.topic sqlalarm_event \
         -sqlalarm.input.kafka.subscribe.topic.pattern 1 \

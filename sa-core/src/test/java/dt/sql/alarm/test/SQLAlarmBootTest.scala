@@ -9,8 +9,9 @@ object SQLAlarmBootTest {
       Array(
         "-sqlalarm.master", "local[*]",
         "-sqlalarm.name", "sqlalarm",
-        "-redis.addresses", "127.0.0.1:6379",
-        "-redis.database", "4",
+        "-spark.redis.host", "127.0.0.1",
+        "-spark.redis.port", "6379",
+        "-spark.redis.db", "4",
         "-sqlalarm.sources", "kafka",
         "-sqlalarm.input.kafka.topic", "sqlalarm_event",
         "-sqlalarm.input.kafka.subscribe.topic.pattern", "1",
