@@ -1,7 +1,7 @@
 package dt.sql.alarm.conf
 
 import dt.sql.alarm.core.Constants.ALARM_RULE
-import tech.sqlclub.common.utils.JacksonUtil
+import tech.sqlclub.common.utils.JacksonUtils
 
 case class AlarmRuleConf(item_id:String, platform:String, title:String, source:Source, filter:Filter)
 case class Source(`type`:String, topic:String)
@@ -11,11 +11,11 @@ case class Field(name:String, `type`:String, xpath:String)
 object AlarmRuleConf {
   def getRkey(source:String, topic:String) = List(ALARM_RULE, source, topic).mkString(":")
 
-  def toJson(ruleConf: AlarmRuleConf) = JacksonUtil.toJson(ruleConf)
+  def toJson(ruleConf: AlarmRuleConf) = JacksonUtils.toJson(ruleConf)
 
-  def formJson(json:String) = JacksonUtil.fromJson[AlarmRuleConf](json, classOf[AlarmRuleConf])
+  def formJson(json:String) = JacksonUtils.fromJson[AlarmRuleConf](json, classOf[AlarmRuleConf])
 
-  def prettyString(ruleConf: AlarmRuleConf): String = JacksonUtil.prettyPrint(ruleConf)
+  def prettyString(ruleConf: AlarmRuleConf): String = JacksonUtils.prettyPrint(ruleConf)
 
 
   def main(args: Array[String]): Unit = {
