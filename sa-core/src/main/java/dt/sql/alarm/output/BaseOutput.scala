@@ -12,6 +12,10 @@ abstract class BaseOutput extends Base {
 
   def process(data:Dataset[AlarmRecord])
 
+  def fullFormat: String
+
+  def shortFormat: String
+
 }
 
 object SinkInfo {

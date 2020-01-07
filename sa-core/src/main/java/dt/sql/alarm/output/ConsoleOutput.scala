@@ -41,4 +41,7 @@ class ConsoleOutput extends BaseOutput with Logging {
     logInfo("Alarm console sink process over!")
   }
 
+  override def fullFormat: String = shortFormat
+
+  override def shortFormat: String = "console"
 }
