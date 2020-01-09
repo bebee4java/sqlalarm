@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS `sqlalarm_records_log` (
   `title` varchar(128) NOT NULL COMMENT '告警标题',
   `platform` varchar(128) NOT NULL COMMENT '告警平台',
   `item_id` varchar(128) NOT NULL COMMENT '告警项id',
+  `source` varchar(128) NOT NULL COMMENT '告警记录数据源',
+  `topic` varchar(128) NOT NULL COMMENT '告警记录所属主题',
   `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`),
   KEY `job_index` (`job_id`, `job_stat`),

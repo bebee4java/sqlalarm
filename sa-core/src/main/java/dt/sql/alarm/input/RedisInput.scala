@@ -83,7 +83,7 @@ class RedisInput extends BaseInput with Logging {
         )))
         .load()
 
-      dStream = lines.selectExpr(s"'${shortFormat}' as ${source}", s"CAST(key AS STRING) as ${topic}", s"CAST(value AS STRING) as ${value}")
+      dStream = lines.selectExpr(s"'${shortFormat}' as ${SOURCE_NAME}", s"CAST(key AS STRING) as ${TOPIC_NAME}", s"CAST(value AS STRING) as ${VALUE_NAME}")
       logInfo("Alarm redis source process over!")
     }
   }

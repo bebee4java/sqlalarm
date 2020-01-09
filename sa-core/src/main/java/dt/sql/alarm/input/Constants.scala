@@ -2,6 +2,10 @@ package dt.sql.alarm.input
 
 object Constants {
 
+  val TOPIC_NAME = "topic"
+  val SOURCE_NAME = "source"
+  val VALUE_NAME = "value"
+
   val KAFKA_TOPIC = "kafka.topic"
   val KAFKA_SUBSCRIBE_TOPIC_PATTERN = "kafka.subscribe.topic.pattern"
 

@@ -6,12 +6,6 @@ object Constants {
 
   val master = "sqlalarm.master"
 
-  val source = "source"
-
-  val topic = "topic"
-
-  val value = "value"
-
   val checkpoint = "sqlalarm.checkpointLocation"
 
   val trigger = "spark.streaming.trigger.time.interval.msec"

@@ -4,7 +4,7 @@ import java.util.concurrent._
 import java.util
 
 import Constants._
-import dt.sql.alarm.core.Constants.{SQLALARM_ALERT, source, topic}
+import dt.sql.alarm.core.Constants.SQLALARM_ALERT
 import tech.sqlclub.common.log.Logging
 import tech.sqlclub.common.utils.ConfigUtils
 import org.apache.spark.sql.{Dataset, Row}
@@ -21,9 +21,9 @@ object AlarmFlow extends Logging{
          (sinkFunc: Dataset[AlarmRecord] => Unit)
          (alertFunc: Dataset[AlarmRecord] => Unit) : Unit ={
     logInfo("Alarm flow start....")
-    val tableIds = data.groupBy(s"$source", s"$topic").count().collect().map{
+    val tableIds = data.groupBy(s"${AlarmRecord.source}", s"${AlarmRecord.topic}").count().collect().map{
       row =>
-        (row.getAs[String](s"$source"), row.getAs[String](s"$topic"), row.getAs[Long]("count"))
+        (row.getAs[String](s"${AlarmRecord.source}"), row.getAs[String](s"${AlarmRecord.topic}"), row.getAs[Long]("count"))
     }
     logInfo(s"batch info (source, topic, count):\n${tableIds.mkString("\n")}")
 

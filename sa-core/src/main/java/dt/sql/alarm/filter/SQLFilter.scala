@@ -4,7 +4,7 @@ import dt.sql.alarm.conf.AlarmRuleConf
 import dt.sql.alarm.core.AlarmRecord._
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
-import dt.sql.alarm.core.Constants._
+import dt.sql.alarm.input.Constants.VALUE_NAME
 import tech.sqlclub.common.exception.SQLClubException
 import tech.sqlclub.common.log.Logging
 import org.apache.spark.sql.types.{MapType, StringType}
@@ -24,7 +24,7 @@ object SQLFilter extends Logging {
 
     val fields = structures.map{
       field =>
-        s"cast(get_json_object($value, '${field.xpath}') as ${field.`type`}) as ${field.name}"
+        s"cast(get_json_object($VALUE_NAME, '${field.xpath}') as ${field.`type`}) as ${field.name}"
     }
 
     val table = df.filter( col(source) === source_.`type` and col(topic) === source_.topic ).selectExpr(fields :_*)
@@ -70,19 +70,21 @@ object SQLFilter extends Logging {
     val result = spark.sql(sql).selectExpr(requireCols :_* ).selectExpr("*" ,
       s"'${ruleConf.title}' as $title",
       s"'${ruleConf.platform}' as $platform",
-      s"'${ruleConf.item_id}' as $item_id"
+      s"'${ruleConf.item_id}' as $item_id",
+      s"'${source_.`type`}' as $source",
+      s"'${source_.topic}' as $topic"
     )
 
     result.printSchema()
 
-    val schemack = result.schema.map{
+    val schema = result.schema.map{
       structField =>
         val name = structField.name
         val dataType = if(structField.dataType.isInstanceOf[MapType]) MapType(StringType,StringType) else structField.dataType
-        requireSchema.contains(name) && requireSchema(name).equals(dataType)
-    }
+        (name, dataType)
+    }.toMap
 
-    if (schemack.filterNot(_ == true).nonEmpty){
+    if ( !requireSchema.equals(schema) ){
       throw new SQLClubException(s"the filter sql exec result schema error!item_id: ${ruleConf.item_id}, schema: ${result.schema}")
     }
 

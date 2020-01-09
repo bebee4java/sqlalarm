@@ -14,7 +14,9 @@ case class AlarmRecord (
     context:Map[String,String],
     title:String,
     platform:String,
-    item_id:String
+    item_id:String,
+    source:String,
+    topic:String
 )
 
 
@@ -27,12 +29,14 @@ object AlarmRecord {
   val title = "title"
   val platform = "platform"
   val item_id = "item_id"
+  val source = "source"
+  val topic = "topic"
 
   // sql必须字段
   def getAllSQLFieldName = Seq[String](job_id, job_stat, event_time, message, context)
 
   // 后台自动加入的字段
-  def getAllBackFieldName = Seq[String](title, platform, item_id)
+  def getAllBackFieldName = Seq[String](title, platform, item_id, source, topic)
 
   def getAllFieldName = getAllSQLFieldName ++ getAllBackFieldName
 
@@ -44,6 +48,8 @@ object AlarmRecord {
     StructField(context, MapType(StringType,StringType)),
     StructField(title, StringType),
     StructField(platform, StringType),
-    StructField(item_id, StringType)
+    StructField(item_id, StringType),
+    StructField(source, StringType),
+    StructField(topic, StringType)
   ))
 }

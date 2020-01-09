@@ -61,7 +61,7 @@ class KafkaInput extends BaseInput with Logging {
         .options(options)
         .load()
 
-      dStream = lines.selectExpr(s"'${shortFormat}' as ${source}", s"${topic}", s"CAST(value AS STRING) as ${value}")
+      dStream = lines.selectExpr(s"'${shortFormat}' as ${SOURCE_NAME}", s"${TOPIC_NAME}", s"CAST(value AS STRING) as ${VALUE_NAME}")
       logInfo("Alarm kafka source process over!")
     }
 
