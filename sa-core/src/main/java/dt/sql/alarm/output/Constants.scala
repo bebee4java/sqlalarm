@@ -15,4 +15,11 @@ object Constants {
   val jdbcBatchsize = "jdbc.batchsize"
   val jdbcMode = "jdbc.mode"
 
+
+  val kafkaImplClass = "kafka.implClass"
+  val KAFKA_ACKS = "kafka.acks"
+  val KAFKA_KEY_SERIALIZER_CLASS = "key.serializer.class"
+  val KAFKA_VALUE_SERIALIZER_CLASS = "value.serializer.class"
+  val KAFKA_TOPIC = dt.sql.alarm.input.Constants.KAFKA_TOPIC
+  val KAFKA_SERVERS = dt.sql.alarm.input.Constants.KAFKA_SERVERS
 }
