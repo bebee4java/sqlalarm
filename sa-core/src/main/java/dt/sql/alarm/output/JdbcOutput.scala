@@ -47,7 +47,7 @@ class JdbcOutput extends BaseOutput with Logging  {
   /**
     * 配置检查
     */
-  override protected[this] def checkConfig(): Option[JdbcConf] = {
+  override protected[this] def checkConfig: Option[JdbcConf] = {
     val url = ConfigUtils.getStringValue(s"$OUTPUT_PREFIX.$jdbcUrl")
     val driver = ConfigUtils.getStringValue(s"$OUTPUT_PREFIX.$jdbcDriver")
     val user = ConfigUtils.getStringValue(s"$OUTPUT_PREFIX.$jdbcUser")

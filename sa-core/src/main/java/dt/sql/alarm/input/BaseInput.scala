@@ -10,6 +10,10 @@ abstract class BaseInput extends Base {
 
   def getDataSetStream(spark:SparkSession):Dataset[Row]
 
+  def fullFormat: String
+
+  def shortFormat: String
+
 }
 
 

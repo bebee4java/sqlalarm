@@ -16,7 +16,7 @@ class ConsoleOutput extends BaseOutput with Logging {
   var flag = new AtomicBoolean(false)
   logInfo("Console sink initialization......")
 
-  override protected[this] def checkConfig(): Option[Conf] = None
+  override protected[this] def checkConfig: Option[Conf] = None
 
 
   override protected[this] def process(session: SparkSession): Unit = {

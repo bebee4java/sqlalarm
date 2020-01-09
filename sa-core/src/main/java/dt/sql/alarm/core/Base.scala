@@ -7,7 +7,7 @@ trait Base {
   /**
     * 配置检查
     */
-  protected[this] def checkConfig():Option[Conf]
+  protected[this] def checkConfig:Option[Conf]
 
   /**
     * 数据处理

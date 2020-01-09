@@ -64,7 +64,7 @@ class KafkaOutput extends BaseOutput with Logging {
   /**
     * 配置检查
     */
-  override protected[this] def checkConfig(): Option[KafkaConf] = {
+  override protected[this] def checkConfig: Option[KafkaConf] = {
     val topic = ConfigUtils.getStringValue(s"$OUTPUT_PREFIX.$KAFKA_TOPIC")
     val servers = ConfigUtils.getStringValue(s"$OUTPUT_PREFIX.$KAFKA_SERVERS")
 

@@ -18,6 +18,16 @@ object Constants {
 
   val KAFKA_SERVERS = "kafka.bootstrap.servers"
   val KAFKA_GROUP = "kafka.group"
-  val KAFKA_DEFAULT_GROUP = "sqlalarm_group"
+  val KAFKA_DEFAULT_GROUP = "sqlalarm_kafka_group"
+
+
+  val REDIS_KEYS = "redis.keys"
+  val REDIS_GROUP = "redis.group"
+  val REDIS_DEFAULT_GROUP = "sqlalarm_redis_group"
+  val REDIS_START_OFFSETS = "redis.start.offsets"
+  val REDIS_CONSUMER_PREFIX = "redis.consumer.prefix"
+  val REDIS_STREAM_PARALLELISM = "redis.stream.parallelism"
+  val REDIS_STREAM_BATCH_SIZE = "redis.stream.batch.size"
+  val REDIS_STREAM_READ_BLOCK_MSEC = "redis.stream.read.block.msec"
 
 }

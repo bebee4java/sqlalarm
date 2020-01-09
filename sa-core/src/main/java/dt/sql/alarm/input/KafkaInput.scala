@@ -67,8 +67,7 @@ class KafkaInput extends BaseInput with Logging {
 
   }
 
-  def fullFormat: String = shortFormat
+  override def fullFormat: String = shortFormat
 
-  def shortFormat: String = "kafka"
-
+  override def shortFormat: String = "kafka"
 }
