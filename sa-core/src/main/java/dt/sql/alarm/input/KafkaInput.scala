@@ -4,7 +4,7 @@ import org.apache.spark.sql.{Dataset, Row, SparkSession}
 import dt.sql.alarm.core.Constants._
 import Constants._
 import dt.sql.alarm.conf.KafkaConf
-import dt.sql.alarm.core.Source
+import dt.sql.alarm.core.{Source, WowLog}
 import tech.sqlclub.common.exception.SQLClubException
 import tech.sqlclub.common.log.Logging
 import tech.sqlclub.common.utils.ConfigUtils
@@ -46,7 +46,7 @@ class KafkaInput extends BaseInput with Logging {
   }
 
   override protected[this] def process(session: SparkSession) = {
-    logInfo("Alarm kafka source process....")
+    WowLog.logInfo("Alarm kafka source process....")
     val conf = checkConfig
     if (conf.isDefined) {
       val kafkaConf = conf.get
@@ -62,7 +62,7 @@ class KafkaInput extends BaseInput with Logging {
         .load()
 
       dStream = lines.selectExpr(s"'${shortFormat}' as ${SOURCE_NAME}", s"${TOPIC_NAME}", s"CAST(value AS STRING) as ${VALUE_NAME}")
-      logInfo("Alarm kafka source process over!")
+      WowLog.logInfo("Alarm kafka source process over!")
     }
 
   }

@@ -2,7 +2,7 @@ package dt.sql.alarm.output
 import java.util.concurrent.atomic.AtomicBoolean
 
 import dt.sql.alarm.conf.Conf
-import dt.sql.alarm.core.{AlarmRecord, Sink}
+import dt.sql.alarm.core.{AlarmRecord, Sink, WowLog}
 import tech.sqlclub.common.log.Logging
 import tech.sqlclub.common.utils.ConfigUtils
 import org.apache.spark.sql.{Dataset, SparkSession}
@@ -14,7 +14,7 @@ class ConsoleOutput extends BaseOutput with Logging {
   var numRows = 20
   var truncate = true
   var flag = new AtomicBoolean(false)
-  logInfo("Console sink initialization......")
+  WowLog.logInfo("Console sink initialization......")
 
   override protected[this] def checkConfig: Option[Conf] = None
 
@@ -36,9 +36,9 @@ class ConsoleOutput extends BaseOutput with Logging {
 
   override def process(data: Dataset[AlarmRecord]): Unit = {
     process(data.sparkSession)
-    logInfo("Alarm console sink process....")
+    WowLog.logInfo("Alarm console sink process....")
     data.show(numRows, truncate)
-    logInfo("Alarm console sink process over!")
+    WowLog.logInfo("Alarm console sink process over!")
   }
 
   override def fullFormat: String = shortFormat

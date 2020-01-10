@@ -3,7 +3,7 @@ package dt.sql.alarm.output
 import java.util.concurrent.atomic.AtomicBoolean
 
 import dt.sql.alarm.conf.KafkaConf
-import dt.sql.alarm.core.{AlarmRecord, Sink}
+import dt.sql.alarm.core.{AlarmRecord, Sink, WowLog}
 import org.apache.spark.sql.{Dataset, SparkSession}
 import tech.sqlclub.common.log.Logging
 import tech.sqlclub.common.utils.{ConfigUtils, JacksonUtils}
@@ -28,12 +28,12 @@ class KafkaOutput extends BaseOutput with Logging {
 
   var kafkaConf:KafkaConf = _
   var flag = new AtomicBoolean(false)
-  logInfo("Kafka sink initialization......")
+  WowLog.logInfo("Kafka sink initialization......")
 
   override def process(data: Dataset[AlarmRecord]): Unit = {
     val spark = data.sparkSession
     process(spark)
-    logInfo("Alarm Kafka sink process....")
+    WowLog.logInfo("Alarm Kafka sink process....")
 
     val format = ConfigUtils.getStringValue(s"$OUTPUT_PREFIX.$kafkaImplClass", fullFormat)
     var options = Map(KAFKA_BOOTSTRAP_SERVERS_NAME -> kafkaConf.servers,
@@ -54,7 +54,7 @@ class KafkaOutput extends BaseOutput with Logging {
     }.toDF(KAFKA_KEY_ATTRIBUTE_NAME,KAFKA_VALUE_ATTRIBUTE_NAME).write
       .format(format).options(options).mode("append").save()
 
-    logInfo("Alarm Kafka sink process over!")
+    WowLog.logInfo("Alarm Kafka sink process over!")
   }
 
   override def fullFormat: String = shortFormat

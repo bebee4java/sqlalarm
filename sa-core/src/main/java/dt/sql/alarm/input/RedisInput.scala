@@ -1,7 +1,7 @@
 package dt.sql.alarm.input
 
 import dt.sql.alarm.conf.RedisConf
-import dt.sql.alarm.core.Source
+import dt.sql.alarm.core.{Source, WowLog}
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
 import dt.sql.alarm.input.Constants._
 import dt.sql.alarm.core.Constants._
@@ -55,7 +55,7 @@ class RedisInput extends BaseInput with Logging {
     * @param session SparkSession
     */
   override protected[this] def process(session: SparkSession): Unit = {
-    logInfo("Alarm redis source process....")
+    WowLog.logInfo("Alarm redis source process....")
     val conf = checkConfig
     if (conf.isDefined) {
       val redisConf = conf.get
@@ -84,7 +84,7 @@ class RedisInput extends BaseInput with Logging {
         .load()
 
       dStream = lines.selectExpr(s"'${shortFormat}' as ${SOURCE_NAME}", s"CAST(key AS STRING) as ${TOPIC_NAME}", s"CAST(value AS STRING) as ${VALUE_NAME}")
-      logInfo("Alarm redis source process over!")
+      WowLog.logInfo("Alarm redis source process over!")
     }
   }
 

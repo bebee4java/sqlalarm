@@ -6,4 +6,6 @@ package dt.sql.alarm.reduce
   */
 class Policy {
 
+
+
 }

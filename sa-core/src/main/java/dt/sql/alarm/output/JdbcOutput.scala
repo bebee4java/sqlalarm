@@ -3,7 +3,7 @@ package dt.sql.alarm.output
 import java.util.concurrent.atomic.AtomicBoolean
 
 import dt.sql.alarm.conf.JdbcConf
-import dt.sql.alarm.core.{AlarmRecord, Sink}
+import dt.sql.alarm.core.{AlarmRecord, Sink, WowLog}
 import org.apache.spark.sql.{Dataset, SparkSession}
 import tech.sqlclub.common.log.Logging
 import tech.sqlclub.common.utils.{ConfigUtils, JacksonUtils}
@@ -20,7 +20,7 @@ import tech.sqlclub.common.exception.SQLClubException
 class JdbcOutput extends BaseOutput with Logging  {
   var jdbcConf:JdbcConf = _
   var flag = new AtomicBoolean(false)
-  logInfo("JDBC sink initialization......")
+  WowLog.logInfo("JDBC sink initialization......")
 
   override def fullFormat: String = shortFormat
 
@@ -28,7 +28,7 @@ class JdbcOutput extends BaseOutput with Logging  {
 
   override def process(data: Dataset[AlarmRecord]): Unit = {
     process(data.sparkSession)
-    logInfo("Alarm JDBC sink process....")
+    WowLog.logInfo("Alarm JDBC sink process....")
 
     val format = ConfigUtils.getStringValue(s"$OUTPUT_PREFIX.$jdbcImplClass", fullFormat)
 
@@ -40,7 +40,7 @@ class JdbcOutput extends BaseOutput with Logging  {
 
     table.write.format(format).options(options).mode(jdbcConf.mode).save(jdbcConf.dbtable)
 
-    logInfo("Alarm JDBC sink process over!")
+    WowLog.logInfo("Alarm JDBC sink process over!")
 
   }
 

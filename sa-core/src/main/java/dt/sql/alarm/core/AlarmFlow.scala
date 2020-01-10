@@ -2,82 +2,118 @@ package dt.sql.alarm.core
 
 import java.util.concurrent._
 import java.util
-
 import Constants._
+import dt.sql.alarm.conf.AlarmRuleConf
 import dt.sql.alarm.core.Constants.SQLALARM_ALERT
 import tech.sqlclub.common.log.Logging
 import tech.sqlclub.common.utils.ConfigUtils
-import org.apache.spark.sql.{Dataset, Row}
+import org.apache.spark.sql.{Dataset,Row, SparkSession}
 
-object AlarmFlow extends Logging{
-  val taskNum = 2
+object AlarmFlow extends Logging {
+
+  def taskNum:Int = SparkRuntime.sparkConfMap.getOrElse( futureTasksThreadPoolSize,
+    ConfigUtils.getStringValue(futureTasksThreadPoolSize, "2")).toInt
+
   lazy private val executors = Executors.newFixedThreadPool(taskNum)
   lazy private val taskList = new util.ArrayList[Future[Unit]](taskNum)
   lazy private val taskTimeOut = SparkRuntime.sparkConfMap.getOrElse(futureTaskTimeOut,
     ConfigUtils.getStringValue(futureTaskTimeOut, "300000")).toLong // Default timeout 5 min
 
   def run(data:Dataset[Row])
-         (filterFunc: Array[(String,String)] => Option[Dataset[AlarmRecord]])
+         (filterFunc: (Dataset[Row], AlarmRuleConf) => Dataset[AlarmRecord])
          (sinkFunc: Dataset[AlarmRecord] => Unit)
-         (alertFunc: Dataset[AlarmRecord] => Unit) : Unit ={
-    logInfo("Alarm flow start....")
-    val tableIds = data.groupBy(s"${AlarmRecord.source}", s"${AlarmRecord.topic}").count().collect().map{
+         (alertFunc: (Dataset[AlarmRecord], AlarmRuleConf) => Unit)
+         (implicit spark:SparkSession = data.sparkSession):Unit = {
+
+    WowLog.logInfo("Alarm flow start....")
+
+    import spark.implicits._
+    val tableIds = data.groupBy(s"${AlarmRecord.source}", s"${AlarmRecord.topic}").count().map{
       row =>
         (row.getAs[String](s"${AlarmRecord.source}"), row.getAs[String](s"${AlarmRecord.topic}"), row.getAs[Long]("count"))
-    }
-    logInfo(s"batch info (source, topic, count):\n${tableIds.mkString("\n")}")
+    }.collect()
 
-    var filterTable:Option[Dataset[AlarmRecord]] = null
+    WowLog.logInfo(s"batch info (source, topic, count):\n${tableIds.mkString("\n")}")
 
-    if (tableIds.nonEmpty){
-      // sql filter
-      logInfo("AlarmFlow table filter...")
-      filterTable = filterFunc(tableIds.map(it => (it._1, it._2)))
-      logInfo("AlarmFlow table filter pass!")
+    if (tableIds.isEmpty) {
+      WowLog.logInfo("batch tableIds is empty return directly!")
+      return
     }
 
-    if (filterTable != null && filterTable.isDefined) {
-      val table = filterTable.get
+    val rulesWithItemId:Array[(String,AlarmRuleConf)] = tableIds.flatMap{
+      case (source, topic, _) =>
+        val key = AlarmRuleConf.getRkey(source, topic) // rule redis key
+        RedisOperations.getTableCache(Array(key)).collect() // get rules
+    }.map{
+      case (ruleConfId, ruleConf) =>
+        (ruleConfId, AlarmRuleConf.formJson(ruleConf))
+    }
 
-      try {
-        table.persist()
+    if (rulesWithItemId.isEmpty){
+      WowLog.logInfo("alarm rule confs is empty return directly!")
+      return
+    }
 
-        // alarm data sink
-        val sinkTask = executors.submit(new Callable[Unit] {
+    rulesWithItemId.foreach{
+      item =>
+        val rule = item._2
+        // sql filter
+        WowLog.logInfo("AlarmFlow table filter...")
+        val filterTable = filterFunc(data, rule)
+        WowLog.logInfo("AlarmFlow table filter pass!")
+
+        sinkAndAlert(filterTable, sinkFunc, alertFunc){
+          () =>
+            val tasks = taskList.iterator()
+            WowLog.logInfo(s"We will run ${taskList.size()} tasks...")
+            while (tasks.hasNext){
+              val task = tasks.next()
+              if (runTask(task)) tasks.remove()
+            }
+            WowLog.logInfo(s"All task completed! Current task list number is: ${taskList.size()}.")
+        }(rule)
+
+    }
+    WowLog.logInfo("Alarm flow end!")
+  }
+
+  def sinkAndAlert(filterTable:Dataset[AlarmRecord],
+                   sinkFunc:Dataset[AlarmRecord]=>Unit,
+                   alertFunc:(Dataset[AlarmRecord],AlarmRuleConf)=>Unit)(run:()=>Unit)
+                  (implicit ruleConf: AlarmRuleConf): Unit ={
+    try {
+      filterTable.persist()
+      if (filterTable.count() == 0) {
+        WowLog.logInfo("filterTable is empty, don't need to need sink and alert functions return directly!")
+        return
+      }
+
+      // alarm data sink
+      val sinkTask = executors.submit(new Callable[Unit] {
+        override def call(): Unit ={
+          WowLog.logInfo("AlarmFlow table sink...")
+          sinkFunc(filterTable)
+          WowLog.logInfo("AlarmFlow table sink task will be executed in the future!")
+        }
+      })
+      taskList.add(sinkTask)
+
+      // alarm record alert
+      if (ConfigUtils.hasConfig(SQLALARM_ALERT)){
+
+        val alertTask = executors.submit(new Callable[Unit] {
           override def call(): Unit ={
-            logInfo("AlarmFlow table sink...")
-            sinkFunc(table)
-            logInfo("AlarmFlow table sink task will be executed in the future!")
+            WowLog.logInfo("AlarmFlow table alert...")
+            alertFunc(filterTable, ruleConf)
+            WowLog.logInfo("AlarmFlow table alert task will be executed in the future!")
           }
         })
-        taskList.add(sinkTask)
-
-        // alarm record alert
-        if (ConfigUtils.hasConfig(SQLALARM_ALERT)){
-
-          val alertTask = executors.submit(new Callable[Unit] {
-            override def call(): Unit ={
-              logInfo("AlarmFlow table alert...")
-              alertFunc(table)
-              logInfo("AlarmFlow table alert task will be executed in the future!")
-            }
-          })
-          taskList.add(alertTask)
-        }
-
-        val tasks = taskList.iterator()
-        logInfo(s"We will run ${taskList.size()} tasks...")
-        while (tasks.hasNext){
-          val task = tasks.next()
-          if (runTask(task)) tasks.remove()
-        }
-        logInfo(s"All task completed! Current task list number is: ${taskList.size()}.")
-
-      } finally {
-        table.unpersist()
+        taskList.add(alertTask)
       }
+      run()
+    }finally {
+      filterTable.unpersist()
     }
-    logInfo("Alarm flow end!")
   }
 
   def runTask( task:Future[Unit] ): Boolean = {
@@ -100,14 +136,14 @@ object AlarmFlow extends Logging{
     if (executors != null) {
       import scala.collection.JavaConverters._
       val unfinishedTasks = taskList.asScala.filterNot(_.isDone).asJava
-      logInfo(s"There are ${unfinishedTasks.size} outstanding tasks to be executed...")
+      WowLog.logInfo(s"There are ${unfinishedTasks.size} outstanding tasks to be executed...")
       val tasks = unfinishedTasks.iterator()
       while (tasks.hasNext){
         val task = tasks.next()
         if (runTask(task)) tasks.remove()
       }
-      logInfo(s"All task completed! Current task list number is: ${unfinishedTasks.size()}.")
-      executors.shutdownNow()
+      WowLog.logInfo(s"All task completed! Current task list number is: ${unfinishedTasks.size()}.")
+      if (!executors.isShutdown) executors.shutdownNow()
     }
   }
 

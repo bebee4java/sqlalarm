@@ -10,6 +10,7 @@ object Constants {
 
   val trigger = "spark.streaming.trigger.time.interval.msec"
   val futureTaskTimeOut = "spark.streaming.future.task.timeout.msec"
+  val futureTasksThreadPoolSize = "spark.streaming.future.tasks.threadPool.size"
 
   val SQLALARM_SOURCES = "sqlalarm.sources"
   val SQLALARM_SINKS = "sqlalarm.sinks"
