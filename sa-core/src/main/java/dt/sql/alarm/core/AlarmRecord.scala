@@ -1,7 +1,6 @@
 package dt.sql.alarm.core
 
 import org.apache.spark.sql.types._
-
 /**
   *
   * Created by songgr on 2019/12/25.
@@ -11,14 +10,13 @@ case class AlarmRecord (
     job_stat:String,
     event_time:String,
     message:String,
-    context:Map[String,String],
+    context:String,       // map string
     title:String,
     platform:String,
     item_id:String,
     source:String,
     topic:String
 )
-
 
 object AlarmRecord {
   val job_id = "job_id"
@@ -45,7 +43,7 @@ object AlarmRecord {
     StructField(job_stat, StringType),
     StructField(event_time, StringType),
     StructField(message, StringType),
-    StructField(context, MapType(StringType,StringType)),
+    StructField(context, StringType),
     StructField(title, StringType),
     StructField(platform, StringType),
     StructField(item_id, StringType),

@@ -1,13 +1,14 @@
 package dt.sql.alarm.filter
 
 import dt.sql.alarm.conf.AlarmRuleConf
+import dt.sql.alarm.core.AlarmRecord
 import dt.sql.alarm.core.AlarmRecord._
-import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.functions.{col, to_json}
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
-import dt.sql.alarm.input.Constants.VALUE_NAME
 import tech.sqlclub.common.exception.SQLClubException
 import tech.sqlclub.common.log.Logging
 import org.apache.spark.sql.types.{MapType, StringType}
+import dt.sql.alarm.core.Constants.SQL_FIELD_VALUE_NAME
 
 object SQLFilter extends Logging {
 
@@ -24,11 +25,12 @@ object SQLFilter extends Logging {
 
     val fields = structures.map{
       field =>
-        s"cast(get_json_object($VALUE_NAME, '${field.xpath}') as ${field.`type`}) as ${field.name}"
+        s"cast(get_json_object($SQL_FIELD_VALUE_NAME, '${field.xpath}') as ${field.`type`}) as ${field.name}"
     }
 
     val table = df.filter( col(source) === source_.`type` and col(topic) === source_.topic ).selectExpr(fields :_*)
 
+    logInfo("SQLFilter SQL table schema: ")
     table.printSchema()
 
     table.createOrReplaceTempView(tableName)
@@ -66,15 +68,15 @@ object SQLFilter extends Logging {
       throw new SQLClubException("exec sql output cols error! find cols: [" + sqlCols.mkString(",") + "],requires: [" + requireCols.mkString(",") + "]!")
     }
 
-
     val result = spark.sql(sql).selectExpr(requireCols :_* ).selectExpr("*" ,
       s"'${ruleConf.title}' as $title",
       s"'${ruleConf.platform}' as $platform",
       s"'${ruleConf.item_id}' as $item_id",
       s"'${source_.`type`}' as $source",
       s"'${source_.topic}' as $topic"
-    )
+    ).withColumn(AlarmRecord.context, to_json(col(AlarmRecord.context)))
 
+    logInfo("SQLFilter SQL table filter result schema: ")
     result.printSchema()
 
     val schema = result.schema.map{

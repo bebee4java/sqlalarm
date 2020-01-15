@@ -23,4 +23,21 @@ object Constants {
   val ALARM_CACHE = "sqlalarm_cache"
   val ALARM_POLICY = "sqlalarm_policy"
 
+
+  // SQL field name
+  val SQL_FIELD_TOPIC_NAME = "topic"
+  val SQL_FIELD_SOURCE_NAME = "source"
+  val SQL_FIELD_VALUE_NAME = "value"
+  val SQL_FIELD_EARLIEST_RECORD_NAME = "earliest_record"
+  val SQL_FIELD_CURRENT_RECORD_NAME = "current_record"
+  val SQL_FIELD_EARLIEST_EVENT_TIME_NAME = "earliest_event_time"
+  val SQL_FIELD_CURRENT_EVENT_TIME_NAME = "current_event_time"
+  val SQL_FIELD_DATAFROM_NAME = "dataFrom"
+  val SQL_FIELD_CACHE_NAME = "cache"
+  val SQL_FIELD_STREAM_NAME = "stream"
+  val SQL_FIELD_RANK_NAME = "rank"
+  val SQL_FIELD_MAXRANK_NAME = "maxRank"
+  val SQL_FIELD_COUNT_NAME = "count"
+
+
 }

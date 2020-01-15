@@ -4,12 +4,12 @@ import dt.sql.alarm.conf.RedisConf
 import dt.sql.alarm.core.{Source, WowLog}
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
 import dt.sql.alarm.input.Constants._
-import dt.sql.alarm.core.Constants._
 import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import tech.sqlclub.common.exception.SQLClubException
 import tech.sqlclub.common.log.Logging
 import tech.sqlclub.common.utils.ConfigUtils
+import dt.sql.alarm.core.Constants._
 
 /**
   *
@@ -83,7 +83,7 @@ class RedisInput extends BaseInput with Logging {
         )))
         .load()
 
-      dStream = lines.selectExpr(s"'${shortFormat}' as ${SOURCE_NAME}", s"CAST(key AS STRING) as ${TOPIC_NAME}", s"CAST(value AS STRING) as ${VALUE_NAME}")
+      dStream = lines.selectExpr(s"'${shortFormat}' as ${SQL_FIELD_SOURCE_NAME}", s"CAST(key AS STRING) as ${SQL_FIELD_TOPIC_NAME}", s"CAST(value AS STRING) as ${SQL_FIELD_VALUE_NAME}")
       WowLog.logInfo("Alarm redis source process over!")
     }
   }

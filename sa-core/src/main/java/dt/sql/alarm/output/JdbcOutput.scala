@@ -35,10 +35,7 @@ class JdbcOutput extends BaseOutput with Logging  {
     val json = JacksonUtils.toJson(jdbcConf)
     val options = JacksonUtils.fromJson(json, classOf[Map[String,AnyRef]]).map(kv => (kv._1, kv._2.toString))
 
-    import org.apache.spark.sql.functions._
-    val table = data.withColumn(AlarmRecord.context, to_json(col(AlarmRecord.context)))
-
-    table.write.format(format).options(options).mode(jdbcConf.mode).save(jdbcConf.dbtable)
+    data.write.format(format).options(options).mode(jdbcConf.mode).save(jdbcConf.dbtable)
 
     WowLog.logInfo("Alarm JDBC sink process over!")
 

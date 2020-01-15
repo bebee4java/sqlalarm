@@ -47,11 +47,12 @@ object SparkRuntime extends Logging {
     WowLog.logInfo("spark parse process and sink start...")
     val sources = getSourceTable(spark)
     WowLog.logInfo("spark stream get all source table succeed!")
+    logInfo("All source data schema: ")
     sources.printSchema()
     val dStreamWriter = sources.writeStream.foreachBatch{
       (batchTable, batchId) =>
         WowLog.logInfo(s"start processing batch: $batchId")
-
+        val start = System.nanoTime()
         AlarmFlow.run(batchTable){
           // filterFunc
           (table, rule) =>
@@ -67,8 +68,8 @@ object SparkRuntime extends Logging {
           (table, rule)=>
            AlarmAlert.push(rule.item_id, rule.source, table)
         }
-
-        WowLog.logInfo(s"bath $batchId processing is done.")
+        val end = System.nanoTime()
+        WowLog.logInfo(s"bath $batchId processing is done. Total time consuming: ${(end-start)/1000000} ms.")
     }
 
     streamingQuery = dStreamWriter

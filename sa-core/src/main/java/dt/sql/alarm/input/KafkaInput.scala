@@ -1,13 +1,13 @@
 package dt.sql.alarm.input
 import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
-import dt.sql.alarm.core.Constants._
 import Constants._
 import dt.sql.alarm.conf.KafkaConf
 import dt.sql.alarm.core.{Source, WowLog}
 import tech.sqlclub.common.exception.SQLClubException
 import tech.sqlclub.common.log.Logging
 import tech.sqlclub.common.utils.ConfigUtils
+import dt.sql.alarm.core.Constants._
 
 /**
   * kafka消息输入
@@ -61,7 +61,7 @@ class KafkaInput extends BaseInput with Logging {
         .options(options)
         .load()
 
-      dStream = lines.selectExpr(s"'${shortFormat}' as ${SOURCE_NAME}", s"${TOPIC_NAME}", s"CAST(value AS STRING) as ${VALUE_NAME}")
+      dStream = lines.selectExpr(s"'${shortFormat}' as ${SQL_FIELD_SOURCE_NAME}", s"${SQL_FIELD_TOPIC_NAME}", s"CAST(value AS STRING) as ${SQL_FIELD_VALUE_NAME}")
       WowLog.logInfo("Alarm kafka source process over!")
     }
 

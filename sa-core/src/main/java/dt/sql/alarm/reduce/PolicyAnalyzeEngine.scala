@@ -1,7 +1,8 @@
 package dt.sql.alarm.reduce
 
+import dt.sql.alarm.conf.AlarmPolicyConf
 import dt.sql.alarm.core.AlarmRecord
-import org.apache.spark.sql.Dataset
+import org.apache.spark.sql.{Dataset, Row}
 
 /**
   * 降噪策略分析引擎
@@ -15,6 +16,6 @@ abstract class PolicyAnalyzeEngine {
                           reduceCount:Int
                          )
 
-  def analyse(records:Dataset[AlarmRecord]):List[EngineResult]
+  def analyse(policy: AlarmPolicyConf, records:Dataset[Row]):Array[EngineResult]
 
 }
