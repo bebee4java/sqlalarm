@@ -67,8 +67,8 @@ object ReduceByTime extends PolicyAnalyzeEngine {
       row =>
         val lastAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_CURRENT_RECORD_NAME), classOf[AlarmRecord])
         val firstAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_EARLIEST_RECORD_NAME), classOf[AlarmRecord])
-        val count = row.getAs[Int](SQL_FIELD_COUNT_NAME)
-        EngineResult(true, lastAlarmRecord, firstAlarmRecord, count)
+        val count = row.getAs[Long](SQL_FIELD_COUNT_NAME)
+        EngineResult(true, lastAlarmRecord, firstAlarmRecord, count.intValue())
     }
 
     WowLog.logInfo("Noise Reduction Policy: ReduceByTime analysis completed!!")
