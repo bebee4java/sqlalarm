@@ -1,8 +1,8 @@
 package dt.sql.alarm.reduce.engine
 
 import dt.sql.alarm.conf.AlarmPolicyConf
-import dt.sql.alarm.core.{AlarmRecord, WowLog}
-import dt.sql.alarm.reduce.PolicyAnalyzeEngine
+import dt.sql.alarm.core.{RecordDetail, WowLog}
+import dt.sql.alarm.reduce.{EngineResult, PolicyAnalyzeEngine}
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.{Dataset, Row}
 import org.apache.spark.sql.functions._
@@ -18,25 +18,25 @@ object ReduceByTime extends PolicyAnalyzeEngine {
   override def analyse(policy: AlarmPolicyConf, records: Dataset[Row]): Array[EngineResult] = {
     WowLog.logInfo("Noise Reduction Policy: ReduceByTime analyzing....")
 
-    val fields = AlarmRecord.getAllFieldName.flatMap(field=> List(lit(field), col(field)) )
+    val fields = RecordDetail.getAllFieldName.flatMap(field=> List(lit(field), col(field)) )
     val table = records.withColumn(SQL_FIELD_VALUE_NAME, to_json(map(fields: _*)))
 
     // group by job_id,job_stat order by event_time desc
     val table_rank = table
       .withColumn(SQL_FIELD_CURRENT_RECORD_NAME, first(SQL_FIELD_VALUE_NAME)
-        over( Window.partitionBy(AlarmRecord.job_id, AlarmRecord.job_stat) orderBy col(AlarmRecord.event_time).desc ) )
+        over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) orderBy col(RecordDetail.event_time).desc ) )
       .withColumn(SQL_FIELD_EARLIEST_RECORD_NAME, last(SQL_FIELD_VALUE_NAME)
-        over( Window.partitionBy(AlarmRecord.job_id, AlarmRecord.job_stat) ) )
-      .withColumn(SQL_FIELD_CURRENT_EVENT_TIME_NAME, first(AlarmRecord.event_time)
-        over( Window.partitionBy(AlarmRecord.job_id, AlarmRecord.job_stat) orderBy col(AlarmRecord.event_time).desc ) )
-      .withColumn(SQL_FIELD_EARLIEST_EVENT_TIME_NAME, last(AlarmRecord.event_time)
-        over( Window.partitionBy(AlarmRecord.job_id, AlarmRecord.job_stat) ) )
+        over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) ) )
+      .withColumn(SQL_FIELD_CURRENT_EVENT_TIME_NAME, first(RecordDetail.event_time)
+        over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) orderBy col(RecordDetail.event_time).desc ) )
+      .withColumn(SQL_FIELD_EARLIEST_EVENT_TIME_NAME, last(RecordDetail.event_time)
+        over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) ) )
       .withColumn(SQL_FIELD_RANK_NAME, row_number()
-        over( Window.partitionBy(AlarmRecord.job_id, AlarmRecord.job_stat) orderBy col(AlarmRecord.event_time).desc ) )
+        over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) orderBy col(RecordDetail.event_time).desc ) )
       .withColumn(SQL_FIELD_DATAFROM_NAME, min(SQL_FIELD_DATAFROM_NAME)
-        over( Window.partitionBy(AlarmRecord.job_id, AlarmRecord.job_stat) ) )
+        over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) ) )
       .withColumn(SQL_FIELD_COUNT_NAME, count(lit(1))
-        over( Window.partitionBy(AlarmRecord.job_id, AlarmRecord.job_stat) ) )
+        over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) ) )
 
     val pendingRecords = table_rank.filter(col(SQL_FIELD_RANK_NAME) === 1).
       select(SQL_FIELD_CURRENT_EVENT_TIME_NAME,SQL_FIELD_CURRENT_RECORD_NAME,
@@ -50,7 +50,7 @@ object ReduceByTime extends PolicyAnalyzeEngine {
 
       firstAlarmRecords.collect().map {
         row=>
-          val firstAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_CURRENT_RECORD_NAME), classOf[AlarmRecord])
+          val firstAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_CURRENT_RECORD_NAME), classOf[RecordDetail])
           EngineResult(true, firstAlarmRecord, firstAlarmRecord, 1)
       }
 
@@ -65,8 +65,8 @@ object ReduceByTime extends PolicyAnalyzeEngine {
 
     val streamAlarmRecords = alarmRecords.collect().map{
       row =>
-        val lastAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_CURRENT_RECORD_NAME), classOf[AlarmRecord])
-        val firstAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_EARLIEST_RECORD_NAME), classOf[AlarmRecord])
+        val lastAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_CURRENT_RECORD_NAME), classOf[RecordDetail])
+        val firstAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_EARLIEST_RECORD_NAME), classOf[RecordDetail])
         val count = row.getAs[Long](SQL_FIELD_COUNT_NAME)
         EngineResult(true, lastAlarmRecord, firstAlarmRecord, count.intValue())
     }

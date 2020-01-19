@@ -20,17 +20,17 @@ object AlarmFlow extends Logging {
     ConfigUtils.getStringValue(futureTaskTimeOut, "300000")).toLong // Default timeout 5 min
 
   def run(data:Dataset[Row])
-         (filterFunc: (Dataset[Row], AlarmRuleConf) => Dataset[AlarmRecord])
-         (sinkFunc: Dataset[AlarmRecord] => Unit)
-         (alertFunc: (Dataset[AlarmRecord], AlarmRuleConf) => Unit)
+         (filterFunc: (Dataset[Row], AlarmRuleConf) => Dataset[RecordDetail])
+         (sinkFunc: Dataset[RecordDetail] => Unit)
+         (alertFunc: (Dataset[RecordDetail], AlarmRuleConf) => Unit)
          (implicit spark:SparkSession = data.sparkSession):Unit = {
 
     WowLog.logInfo("Alarm flow start....")
 
     import spark.implicits._
-    val tableIds = data.groupBy(s"${AlarmRecord.source}", s"${AlarmRecord.topic}").count().map{
+    val tableIds = data.groupBy(s"${RecordDetail.source}", s"${RecordDetail.topic}").count().map{
       row =>
-        (row.getAs[String](s"${AlarmRecord.source}"), row.getAs[String](s"${AlarmRecord.topic}"), row.getAs[Long]("count"))
+        (row.getAs[String](s"${RecordDetail.source}"), row.getAs[String](s"${RecordDetail.topic}"), row.getAs[Long]("count"))
     }.collect()
 
     WowLog.logInfo(s"batch info (source, topic, count):\n${tableIds.mkString("\n")}")
@@ -62,6 +62,7 @@ object AlarmFlow extends Logging {
         val filterTable = filterFunc(data, rule)
         WowLog.logInfo("AlarmFlow table filter pass!")
 
+
         sinkAndAlert(filterTable, sinkFunc, alertFunc){
           () =>
             val tasks = taskList.iterator()
@@ -77,9 +78,9 @@ object AlarmFlow extends Logging {
     WowLog.logInfo("Alarm flow end!")
   }
 
-  def sinkAndAlert(filterTable:Dataset[AlarmRecord],
-                   sinkFunc:Dataset[AlarmRecord]=>Unit,
-                   alertFunc:(Dataset[AlarmRecord],AlarmRuleConf)=>Unit)(run:()=>Unit)
+  def sinkAndAlert(filterTable:Dataset[RecordDetail],
+                   sinkFunc:Dataset[RecordDetail]=>Unit,
+                   alertFunc:(Dataset[RecordDetail],AlarmRuleConf)=>Unit)(run:()=>Unit)
                   (implicit ruleConf: AlarmRuleConf): Unit ={
     try {
       filterTable.persist()

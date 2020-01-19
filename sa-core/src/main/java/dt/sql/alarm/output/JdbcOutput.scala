@@ -3,7 +3,7 @@ package dt.sql.alarm.output
 import java.util.concurrent.atomic.AtomicBoolean
 
 import dt.sql.alarm.conf.JdbcConf
-import dt.sql.alarm.core.{AlarmRecord, Sink, WowLog}
+import dt.sql.alarm.core.{RecordDetail, Sink, WowLog}
 import org.apache.spark.sql.{Dataset, SparkSession}
 import tech.sqlclub.common.log.Logging
 import tech.sqlclub.common.utils.{ConfigUtils, JacksonUtils}
@@ -26,7 +26,7 @@ class JdbcOutput extends BaseOutput with Logging  {
 
   override def shortFormat: String = "jdbc"
 
-  override def process(data: Dataset[AlarmRecord]): Unit = {
+  override def process(data: Dataset[RecordDetail]): Unit = {
     process(data.sparkSession)
     WowLog.logInfo("Alarm JDBC sink process....")
 

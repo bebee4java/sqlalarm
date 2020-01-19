@@ -1,6 +1,6 @@
 package dt.sql.alarm.output
 
-import dt.sql.alarm.core.{AlarmRecord, Base, Sink}
+import dt.sql.alarm.core.{RecordDetail, Base, Sink}
 import org.apache.spark.sql.Dataset
 import org.reflections.Reflections
 
@@ -10,7 +10,7 @@ import org.reflections.Reflections
   */
 abstract class BaseOutput extends Base {
 
-  def process(data:Dataset[AlarmRecord])
+  def process(data:Dataset[RecordDetail])
 
   def fullFormat: String
 

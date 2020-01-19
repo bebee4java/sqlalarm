@@ -1,11 +1,13 @@
 package dt.sql.alarm.core
 
-import org.apache.spark.SparkConf
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.sql.{DataFrame, Dataset, SaveMode, SparkSession}
 import dt.sql.alarm.input.SourceInfo
 import Constants._
+import dt.sql.alarm.conf.AlarmPolicyConf
 import dt.sql.alarm.filter.SQLFilter
 import dt.sql.alarm.output.SinkInfo
+import dt.sql.alarm.reduce.EngineResult
 import org.apache.spark.rdd.RDD
 import tech.sqlclub.common.log.Logging
 import tech.sqlclub.common.utils.ConfigUtils
@@ -58,7 +60,7 @@ object SparkRuntime extends Logging {
           (table, rule) =>
             val filterTable = SQLFilter.process(rule, table)
             import spark.implicits._
-            filterTable.as[AlarmRecord]
+            filterTable.as[RecordDetail]
         }{
           // sinkFunc
           table =>
@@ -66,7 +68,17 @@ object SparkRuntime extends Logging {
         }{
           // alertFunc
           (table, rule)=>
-           AlarmAlert.push(rule.item_id, rule.source, table)
+            val policyConf = RedisOperations.getTableCache(AlarmPolicyConf.getRkey(rule.source.`type`, rule.source.topic), rule.item_id)
+            val policy = AlarmPolicyConf.formJson(policyConf)
+            val alarmRecords = if (null != policy) {
+              AlarmReduce.reduce(policy, table) // alarm noise reduction
+            } else {
+              table.collect().map{
+                record =>
+                  EngineResult(true, record, record, 1)
+              }
+            }
+            AlarmAlert.push(alarmRecords) // alarm alert
         }
         val end = System.nanoTime()
         WowLog.logInfo(s"bath $batchId processing is done. Total time consuming: ${(end-start)/1000000} ms.")
@@ -115,17 +127,19 @@ object RedisOperations {
   import redis.clients.jedis.Jedis
   import com.redislabs.provider.redis._
   import com.redislabs.provider.redis.util.ConnectionUtils
-  lazy private val sc = SparkRuntime.getSparkSession.sparkContext
+
+  lazy private val spark = SparkRuntime.getSparkSession
+  def sc:SparkContext = spark.sparkContext
 
   lazy private val redisEndpoint = RedisConfig.fromSparkConf(sc.getConf).initialHost
 
-  def IncorrectKeysOrKeyPatternMsg = "RedisOperations KeysOrKeyPattern should be String or Array[String]"
+  def IncorrectMsg(param:String) = s"RedisOperations $param should be String or Array[String]"
 
   def getTableCache[T](keysOrKeyPattern: T):RDD[(String, String)] = {
     keysOrKeyPattern match {
       case keyPattern: String => sc.fromRedisHash(keyPattern.asInstanceOf[String])
       case keys: Array[String] => sc.fromRedisHash(keys.asInstanceOf[Array[String]])
-      case _ => throw new SQLClubException(IncorrectKeysOrKeyPatternMsg)
+      case _ => throw new SQLClubException(IncorrectMsg("keysOrKeyPattern"))
     }
   }
 
@@ -151,8 +165,42 @@ object RedisOperations {
     keysOrKeyPattern match {
       case keyPattern: String => sc.fromRedisList(keyPattern.asInstanceOf[String])
       case keys: Array[String] => sc.fromRedisList(keys.asInstanceOf[Array[String]])
-      case _ => throw new SQLClubException(IncorrectKeysOrKeyPatternMsg)
+      case _ => throw new SQLClubException(IncorrectMsg("keysOrKeyPattern"))
     }
 
   }
+
+  def setListCache[T](key:String, data:T, saveMode: SaveMode, ttl:Int=0) = {
+    if (SaveMode.Overwrite == saveMode) {
+      val conn = redisEndpoint.connect()
+      ConnectionUtils.withConnection[Long](conn) {
+        conn =>
+          conn.del(key)
+      }
+    }
+    import spark.implicits._
+    val rdd = data match {
+      case rdd:RDD[String] => rdd
+      case ds:Dataset[String] => ds.rdd
+      case df:DataFrame => df.as[String].rdd
+    }
+
+    sc.toRedisLIST(rdd, key, ttl)
+  }
+
+  def delCache[T](keyOrArrayKey: T)
+    (implicit conn:Jedis = redisEndpoint.connect()): Long = {
+
+    val keys = keyOrArrayKey match {
+      case key: String => Array(key.asInstanceOf[String])
+      case keys: Array[String] => keys.asInstanceOf[Array[String]]
+      case _ => throw new SQLClubException(IncorrectMsg("keyOrArrayKey"))
+    }
+
+    ConnectionUtils.withConnection[Long](conn) {
+      conn =>
+        conn.del(keys:_*)
+    }
+  }
+
 }

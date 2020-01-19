@@ -1,7 +1,7 @@
 package dt.sql.alarm.test
 
 import dt.sql.alarm.core.Constants.{appName, master}
-import dt.sql.alarm.core.{AlarmRecord, RedisOperations, SparkRuntime}
+import dt.sql.alarm.core.{RecordDetail, RedisOperations, SparkRuntime}
 import org.scalatest.FunSuite
 import tech.sqlclub.common.utils.{ConfigUtils, JacksonUtils}
 

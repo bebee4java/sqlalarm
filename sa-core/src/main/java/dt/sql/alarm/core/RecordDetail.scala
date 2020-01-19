@@ -5,7 +5,7 @@ import org.apache.spark.sql.types._
   *
   * Created by songgr on 2019/12/25.
   */
-case class AlarmRecord (
+case class RecordDetail(
     job_id:String,
     job_stat:String,
     event_time:String,
@@ -18,7 +18,7 @@ case class AlarmRecord (
     topic:String
 )
 
-object AlarmRecord {
+object RecordDetail {
   val job_id = "job_id"
   val job_stat = "job_stat"
   val event_time = "event_time"

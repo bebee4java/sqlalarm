@@ -1,7 +1,7 @@
 package dt.sql.alarm.reduce
 
 import dt.sql.alarm.conf.AlarmPolicyConf
-import dt.sql.alarm.core.AlarmRecord
+import dt.sql.alarm.core.RecordDetail
 import org.apache.spark.sql.{Dataset, Row}
 
 /**
@@ -10,12 +10,12 @@ import org.apache.spark.sql.{Dataset, Row}
   */
 abstract class PolicyAnalyzeEngine {
 
-  case class EngineResult(hasWarning:Boolean,
-                          lastAlarmRecord:AlarmRecord,
-                          firstAlarmRecord:AlarmRecord,
-                          reduceCount:Int
-                         )
-
   def analyse(policy: AlarmPolicyConf, records:Dataset[Row]):Array[EngineResult]
-
 }
+
+
+case class EngineResult(hasWarning:Boolean,
+                        lastAlarmRecord:RecordDetail,
+                        firstAlarmRecord:RecordDetail,
+                        reduceCount:Int
+                       )

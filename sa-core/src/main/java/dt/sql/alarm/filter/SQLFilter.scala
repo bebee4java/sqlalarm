@@ -1,8 +1,8 @@
 package dt.sql.alarm.filter
 
 import dt.sql.alarm.conf.AlarmRuleConf
-import dt.sql.alarm.core.AlarmRecord
-import dt.sql.alarm.core.AlarmRecord._
+import dt.sql.alarm.core.RecordDetail
+import dt.sql.alarm.core.RecordDetail._
 import org.apache.spark.sql.functions.{col, to_json}
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import tech.sqlclub.common.exception.SQLClubException
@@ -74,7 +74,7 @@ object SQLFilter extends Logging {
       s"'${ruleConf.item_id}' as $item_id",
       s"'${source_.`type`}' as $source",
       s"'${source_.topic}' as $topic"
-    ).withColumn(AlarmRecord.context, to_json(col(AlarmRecord.context)))
+    ).withColumn(RecordDetail.context, to_json(col(RecordDetail.context)))
 
     logInfo("SQLFilter SQL table filter result schema: ")
     result.printSchema()

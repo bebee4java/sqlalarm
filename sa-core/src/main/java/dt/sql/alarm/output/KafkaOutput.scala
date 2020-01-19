@@ -3,7 +3,7 @@ package dt.sql.alarm.output
 import java.util.concurrent.atomic.AtomicBoolean
 
 import dt.sql.alarm.conf.KafkaConf
-import dt.sql.alarm.core.{AlarmRecord, Sink, WowLog}
+import dt.sql.alarm.core.{RecordDetail, Sink, WowLog}
 import org.apache.spark.sql.{Dataset, SparkSession}
 import tech.sqlclub.common.log.Logging
 import tech.sqlclub.common.utils.{ConfigUtils, JacksonUtils}
@@ -30,7 +30,7 @@ class KafkaOutput extends BaseOutput with Logging {
   var flag = new AtomicBoolean(false)
   WowLog.logInfo("Kafka sink initialization......")
 
-  override def process(data: Dataset[AlarmRecord]): Unit = {
+  override def process(data: Dataset[RecordDetail]): Unit = {
     val spark = data.sparkSession
     process(spark)
     WowLog.logInfo("Alarm Kafka sink process....")
