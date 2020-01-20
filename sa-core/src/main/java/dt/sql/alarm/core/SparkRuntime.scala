@@ -4,7 +4,6 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.sql.{DataFrame, Dataset, SaveMode, SparkSession}
 import dt.sql.alarm.input.SourceInfo
 import Constants._
-import dt.sql.alarm.conf.AlarmPolicyConf
 import dt.sql.alarm.filter.SQLFilter
 import dt.sql.alarm.output.SinkInfo
 import dt.sql.alarm.reduce.EngineResult
@@ -57,21 +56,19 @@ object SparkRuntime extends Logging {
         val start = System.nanoTime()
         AlarmFlow.run(batchTable){
           // filterFunc
-          (table, rule) =>
-            val filterTable = SQLFilter.process(rule, table)
+          (table, rule, policy) =>
+            val filterTable = SQLFilter.process(table, rule, policy)
             import spark.implicits._
             filterTable.as[RecordDetail]
         }{
           // sinkFunc
           table =>
-            sinks.map(_.process(table))
+            sinks.foreach(_ process table.filter(_.alarm == 1) )
         }{
           // alertFunc
-          (table, rule)=>
-            val policyConf = RedisOperations.getTableCache(AlarmPolicyConf.getRkey(rule.source.`type`, rule.source.topic), rule.item_id)
-            val policy = AlarmPolicyConf.formJson(policyConf)
+          (table, policy)=>
             val alarmRecords = if (null != policy) {
-              AlarmReduce.reduce(policy, table) // alarm noise reduction
+              AlarmReduce.reduce(table, policy) // alarm noise reduction
             } else {
               table.collect().map{
                 record =>

@@ -19,29 +19,31 @@ object ReduceByTime extends PolicyAnalyzeEngine {
     WowLog.logInfo("Noise Reduction Policy: ReduceByTime analyzing....")
 
     val fields = RecordDetail.getAllFieldName.flatMap(field=> List(lit(field), col(field)) )
-    val table = records.withColumn(SQL_FIELD_VALUE_NAME, to_json(map(fields: _*)))
+    // filter alarm records
+    val table = records.withColumn(SQL_FIELD_VALUE_NAME, to_json(map(fields: _*))).filter(col(RecordDetail.alarm) === 1)
 
     // group by job_id,job_stat order by event_time desc
     val table_rank = table
-      .withColumn(SQL_FIELD_CURRENT_RECORD_NAME, first(SQL_FIELD_VALUE_NAME)
+      .withColumn(SQL_FIELD_CURRENT_RECORD_NAME, first(SQL_FIELD_VALUE_NAME)      // current record value
         over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) orderBy col(RecordDetail.event_time).desc ) )
-      .withColumn(SQL_FIELD_EARLIEST_RECORD_NAME, last(SQL_FIELD_VALUE_NAME)
+      .withColumn(SQL_FIELD_EARLIEST_RECORD_NAME, last(SQL_FIELD_VALUE_NAME)      // first record value
         over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) ) )
-      .withColumn(SQL_FIELD_CURRENT_EVENT_TIME_NAME, first(RecordDetail.event_time)
+      .withColumn(SQL_FIELD_CURRENT_EVENT_TIME_NAME, first(RecordDetail.event_time)   // current event time
         over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) orderBy col(RecordDetail.event_time).desc ) )
-      .withColumn(SQL_FIELD_EARLIEST_EVENT_TIME_NAME, last(RecordDetail.event_time)
+      .withColumn(SQL_FIELD_EARLIEST_EVENT_TIME_NAME, last(RecordDetail.event_time)   // first event time
         over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) ) )
-      .withColumn(SQL_FIELD_RANK_NAME, row_number()
+      .withColumn(SQL_FIELD_RANK_NAME, row_number()                                  // rank value
         over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) orderBy col(RecordDetail.event_time).desc ) )
-      .withColumn(SQL_FIELD_DATAFROM_NAME, min(SQL_FIELD_DATAFROM_NAME)
+      .withColumn(SQL_FIELD_DATAFROM_NAME, min(SQL_FIELD_DATAFROM_NAME)              // datafrom value
         over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) ) )
-      .withColumn(SQL_FIELD_COUNT_NAME, count(lit(1))
+      .withColumn(SQL_FIELD_COUNT_NAME, count(lit(1))                        // record count
         over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) ) )
 
     val pendingRecords = table_rank.filter(col(SQL_FIELD_RANK_NAME) === 1).
       select(SQL_FIELD_CURRENT_EVENT_TIME_NAME,SQL_FIELD_CURRENT_RECORD_NAME,
         SQL_FIELD_EARLIEST_EVENT_TIME_NAME,SQL_FIELD_EARLIEST_RECORD_NAME,SQL_FIELD_DATAFROM_NAME,SQL_FIELD_COUNT_NAME)
 
+    // first alarm
     val firstAlarmRecords = if (policy.policy.alertFirst) {
       val firstAlarmRecords = pendingRecords.filter(
         col(SQL_FIELD_DATAFROM_NAME) === SQL_FIELD_STREAM_NAME and  // only from stream
@@ -58,6 +60,7 @@ object ReduceByTime extends PolicyAnalyzeEngine {
       Array(EngineResult(false, null, null, -1))
     }
 
+    // over time window
     val alarmRecords = pendingRecords.filter(
       unix_timestamp(col(SQL_FIELD_CURRENT_EVENT_TIME_NAME)) -
         unix_timestamp(col(SQL_FIELD_EARLIEST_EVENT_TIME_NAME)) >= policy.window.getTimeWindowSec

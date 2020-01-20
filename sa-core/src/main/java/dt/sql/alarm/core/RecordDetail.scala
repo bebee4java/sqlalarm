@@ -15,7 +15,8 @@ case class RecordDetail(
     platform:String,
     item_id:String,
     source:String,
-    topic:String
+    topic:String,
+    alarm:Int           // is alarm
 )
 
 object RecordDetail {
@@ -29,12 +30,13 @@ object RecordDetail {
   val item_id = "item_id"
   val source = "source"
   val topic = "topic"
+  val alarm = "alarm"
 
   // sql必须字段
   def getAllSQLFieldName = Seq[String](job_id, job_stat, event_time, message, context)
 
   // 后台自动加入的字段
-  def getAllBackFieldName = Seq[String](title, platform, item_id, source, topic)
+  def getAllBackFieldName = Seq[String](title, platform, item_id, source, topic, alarm)
 
   def getAllFieldName = getAllSQLFieldName ++ getAllBackFieldName
 
@@ -48,6 +50,7 @@ object RecordDetail {
     StructField(platform, StringType),
     StructField(item_id, StringType),
     StructField(source, StringType),
-    StructField(topic, StringType)
+    StructField(topic, StringType),
+    StructField(alarm, IntegerType)
   ))
 }

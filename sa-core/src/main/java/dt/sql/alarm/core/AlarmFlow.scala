@@ -2,12 +2,13 @@ package dt.sql.alarm.core
 
 import java.util.concurrent._
 import java.util
+
 import Constants._
-import dt.sql.alarm.conf.AlarmRuleConf
+import dt.sql.alarm.conf.{AlarmPolicyConf, AlarmRuleConf}
 import dt.sql.alarm.core.Constants.SQLALARM_ALERT
 import tech.sqlclub.common.log.Logging
 import tech.sqlclub.common.utils.ConfigUtils
-import org.apache.spark.sql.{Dataset,Row, SparkSession}
+import org.apache.spark.sql.{Dataset, Row, SparkSession}
 
 object AlarmFlow extends Logging {
 
@@ -20,9 +21,9 @@ object AlarmFlow extends Logging {
     ConfigUtils.getStringValue(futureTaskTimeOut, "300000")).toLong // Default timeout 5 min
 
   def run(data:Dataset[Row])
-         (filterFunc: (Dataset[Row], AlarmRuleConf) => Dataset[RecordDetail])
+         (filterFunc: (Dataset[Row], AlarmRuleConf, AlarmPolicyConf) => Dataset[RecordDetail])
          (sinkFunc: Dataset[RecordDetail] => Unit)
-         (alertFunc: (Dataset[RecordDetail], AlarmRuleConf) => Unit)
+         (alertFunc: (Dataset[RecordDetail], AlarmPolicyConf) => Unit)
          (implicit spark:SparkSession = data.sparkSession):Unit = {
 
     WowLog.logInfo("Alarm flow start....")
@@ -56,10 +57,12 @@ object AlarmFlow extends Logging {
 
     rulesWithItemId.foreach{
       item =>
-        val rule = item._2
+        val rule = item._2  // 告警规则
+        val policyConf = RedisOperations.getTableCache(AlarmPolicyConf.getRkey(rule.source.`type`, rule.source.topic), rule.item_id)
+        val policy = AlarmPolicyConf.formJson(policyConf) //告警策略
         // sql filter
         WowLog.logInfo("AlarmFlow table filter...")
-        val filterTable = filterFunc(data, rule)
+        val filterTable = filterFunc(data, rule, policy)
         WowLog.logInfo("AlarmFlow table filter pass!")
 
 
@@ -72,7 +75,7 @@ object AlarmFlow extends Logging {
               if (runTask(task)) tasks.remove()
             }
             WowLog.logInfo(s"All task completed! Current task list number is: ${taskList.size()}.")
-        }(rule)
+        }(rule, policy)
 
     }
     WowLog.logInfo("Alarm flow end!")
@@ -80,8 +83,8 @@ object AlarmFlow extends Logging {
 
   def sinkAndAlert(filterTable:Dataset[RecordDetail],
                    sinkFunc:Dataset[RecordDetail]=>Unit,
-                   alertFunc:(Dataset[RecordDetail],AlarmRuleConf)=>Unit)(run:()=>Unit)
-                  (implicit ruleConf: AlarmRuleConf): Unit ={
+                   alertFunc:(Dataset[RecordDetail],AlarmPolicyConf)=>Unit)(run:()=>Unit)
+                  (implicit ruleConf: AlarmRuleConf, policyConf: AlarmPolicyConf): Unit ={
     try {
       filterTable.persist()
       if (filterTable.count() == 0) {
@@ -105,7 +108,7 @@ object AlarmFlow extends Logging {
         val alertTask = executors.submit(new Callable[Unit] {
           override def call(): Unit ={
             WowLog.logInfo("AlarmFlow table alert...")
-            alertFunc(filterTable, ruleConf)
+            alertFunc(filterTable, policyConf)
             WowLog.logInfo("AlarmFlow table alert task will be executed in the future!")
           }
         })

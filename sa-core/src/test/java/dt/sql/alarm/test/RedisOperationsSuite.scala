@@ -57,7 +57,7 @@ class RedisOperationsSuite extends FunSuite {
         |                "xpath":"$.job_time"
         |            }
         |        ],
-        |        "sql":"select job_name as job_id,job_stat,job_time as event_time,'job failed' as message, map('job_owner',job_owner) as context from fail_job where job_stat='Fail'"
+        |        "sql":"select job_name as job_id,job_stat,job_time as event_time, job_stat as message, map('job_owner',job_owner) as context from fail_job where job_stat='Fail'"
         |    }
         |}
       """.stripMargin
@@ -91,7 +91,9 @@ class RedisOperationsSuite extends FunSuite {
         |   "unit": "m"
         | },
         | "policy":{
-        |   "type":"absolute",
+        |   "type":"scale",
+        |   "agg":"count",
+        |   "value":100,
         |   "first_alert": 1
         | }
         |}

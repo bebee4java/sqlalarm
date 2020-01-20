@@ -16,7 +16,7 @@ import dt.sql.alarm.reduce.EngineResult
   */
 object AlarmReduce extends Logging {
 
-  def reduce(policy: AlarmPolicyConf, data:Dataset[RecordDetail]): Array[EngineResult] = {
+  def reduce(data:Dataset[RecordDetail], policy: AlarmPolicyConf): Array[EngineResult] = {
     val spark = data.sparkSession
     val engine = getPolicyAnalyzeEngine(policy.policy.`type`, policy.window.`type`)
     // get redis cache

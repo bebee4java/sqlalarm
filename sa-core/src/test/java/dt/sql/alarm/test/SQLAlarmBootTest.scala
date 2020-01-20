@@ -19,7 +19,7 @@ object SQLAlarmBootTest {
         "-sqlalarm.sinks", "console",
         "-sqlalarm.output.kafka.topic", "sqlalarm_output",
         "-sqlalarm.output.kafka.bootstrap.servers", "127.0.0.1:9092",
-
+        "-sqlalarm.checkpointLocation", "checkpoint",
         "sqlalarm.alert.pigeonApi", "https://dt.sqlclub/api/pigeon"
 
       )
