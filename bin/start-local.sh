@@ -42,5 +42,6 @@ ${SPARK_HOME}/bin/spark-submit --class dt.sql.alarm.SQLAlarmBoot \
         -sqlalarm.input.kafka.topic sqlalarm_event \
         -sqlalarm.input.kafka.subscribe.topic.pattern 1 \
         -sqlalarm.input.kafka.bootstrap.servers "127.0.0.1:9092" \
+        -sqlalarm.checkpointLocation checkpoint \
         -sqlalarm.sinks console
         
