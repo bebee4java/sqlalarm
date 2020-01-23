@@ -2,7 +2,7 @@ package dt.sql.alarm.reduce
 
 import dt.sql.alarm.conf.AlarmPolicyConf
 import dt.sql.alarm.core.RecordDetail
-import org.apache.spark.sql.{Dataset, Row}
+import org.apache.spark.sql.{Dataset, Row, SaveMode}
 
 /**
   * 降噪策略分析引擎
@@ -10,7 +10,7 @@ import org.apache.spark.sql.{Dataset, Row}
   */
 abstract class PolicyAnalyzeEngine {
 
-  def analyse(policy: AlarmPolicyConf, records:Dataset[Row]):Array[EngineResult]
+  def analyse(policy: AlarmPolicyConf, records:Dataset[Row]):(Array[EngineResult], List[(Dataset[Row], SaveMode)])
 }
 
 

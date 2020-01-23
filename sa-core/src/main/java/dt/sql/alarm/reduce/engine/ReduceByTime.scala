@@ -4,10 +4,11 @@ import dt.sql.alarm.conf.AlarmPolicyConf
 import dt.sql.alarm.core.{RecordDetail, WowLog}
 import dt.sql.alarm.reduce.{EngineResult, PolicyAnalyzeEngine}
 import org.apache.spark.sql.expressions.Window
-import org.apache.spark.sql.{Dataset, Row}
+import org.apache.spark.sql.{Dataset, Row, SaveMode}
 import org.apache.spark.sql.functions._
 import dt.sql.alarm.core.Constants._
 import tech.sqlclub.common.utils.JacksonUtils
+import dt.sql.alarm.core.RecordDetail._
 
 /**
   *
@@ -15,7 +16,7 @@ import tech.sqlclub.common.utils.JacksonUtils
   */
 object ReduceByTime extends PolicyAnalyzeEngine {
 
-  override def analyse(policy: AlarmPolicyConf, records: Dataset[Row]): Array[EngineResult] = {
+  override def analyse(policy: AlarmPolicyConf, records: Dataset[Row]): (Array[EngineResult], List[(Dataset[Row], SaveMode)]) = {
     WowLog.logInfo("Noise Reduction Policy: ReduceByTime analyzing....")
 
     val fields = RecordDetail.getAllFieldName.flatMap(field=> List(lit(field), col(field)) )
@@ -76,6 +77,11 @@ object ReduceByTime extends PolicyAnalyzeEngine {
 
     WowLog.logInfo("Noise Reduction Policy: ReduceByTime analysis completed!!")
 
-    firstAlarmRecords ++ streamAlarmRecords
+    // 没有产生告警的记录需要入cache
+    val cacheAdding = table.join(alarmRecords, Seq(job_id,job_stat) , "left_outer")
+        .filter(isnull(alarmRecords(SQL_FIELD_VALUE_NAME)))
+        .select(col(job_id), col(job_stat), table(SQL_FIELD_VALUE_NAME))
+
+    (firstAlarmRecords ++ streamAlarmRecords, List((cacheAdding, SaveMode.Append)))
   }
 }

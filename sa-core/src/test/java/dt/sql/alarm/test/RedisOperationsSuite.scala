@@ -81,7 +81,7 @@ class RedisOperationsSuite extends FunSuite {
     val key = "sqlalarm_policy:kafka:sqlalarm_event"
     val field = "uuid00000001"
 
-    val value =
+    var value =
       """
         |{
         | "item_id" : "uuid00000001",
@@ -95,6 +95,21 @@ class RedisOperationsSuite extends FunSuite {
         |   "agg":"count",
         |   "value":100,
         |   "first_alert": 1
+        | }
+        |}
+      """.stripMargin
+
+    value =
+      """
+        |{
+        | "item_id" : "uuid00000001",
+        | "window": {
+        |   "type": "time",
+        |   "value": 10,
+        |   "unit": "m"
+        | },
+        | "policy":{
+        |   "type":"absolute"
         | }
         |}
       """.stripMargin
