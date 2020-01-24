@@ -54,7 +54,7 @@ object SparkRuntime extends Logging {
       (batchTable, batchId) =>
         WowLog.logInfo(s"start processing batch: $batchId")
         val start = System.nanoTime()
-        AlarmFlow.run(batchTable){
+        AlarmFlow.run(batchId, batchTable){
           // filterFunc
           (table, rule, policy) =>
             val filterTable = SQLFilter.process(table, rule, policy)

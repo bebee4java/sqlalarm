@@ -2,6 +2,7 @@ package dt.sql.alarm.core
 
 import java.util.concurrent._
 import java.util
+import java.util.UUID
 
 import Constants._
 import dt.sql.alarm.conf.{AlarmPolicyConf, AlarmRuleConf}
@@ -9,6 +10,7 @@ import dt.sql.alarm.core.Constants.SQLALARM_ALERT
 import tech.sqlclub.common.log.Logging
 import tech.sqlclub.common.utils.ConfigUtils
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
+import tech.sqlclub.common.exception.SQLClubException
 
 object AlarmFlow extends Logging {
 
@@ -20,13 +22,17 @@ object AlarmFlow extends Logging {
   lazy private val taskTimeOut = SparkRuntime.sparkConfMap.getOrElse(futureTaskTimeOut,
     ConfigUtils.getStringValue(futureTaskTimeOut, "300000")).toLong // Default timeout 5 min
 
-  def run(data:Dataset[Row])
+  def run(batchId:Long, data:Dataset[Row])
          (filterFunc: (Dataset[Row], AlarmRuleConf, AlarmPolicyConf) => Dataset[RecordDetail])
          (sinkFunc: Dataset[RecordDetail] => Unit)
          (alertFunc: (Dataset[RecordDetail], AlarmPolicyConf) => Unit)
          (implicit spark:SparkSession = data.sparkSession):Unit = {
 
     WowLog.logInfo("Alarm flow start....")
+
+    val groupId = nextGroupId
+    val jobName = s"SQLAlarm-batch-$batchId"
+    spark.sparkContext.setJobGroup(groupId, jobName, true)
 
     import spark.implicits._
     val tableIds = data.groupBy(s"${RecordDetail.source}", s"${RecordDetail.topic}").count().map{
@@ -72,7 +78,12 @@ object AlarmFlow extends Logging {
             WowLog.logInfo(s"We will run ${taskList.size()} tasks...")
             while (tasks.hasNext){
               val task = tasks.next()
-              if (runTask(task)) tasks.remove()
+              val result = runTask(task)
+              if (result._1) {
+                tasks.remove()
+              } else {
+                killBatchJob(spark, groupId, jobName)
+              }
             }
             WowLog.logInfo(s"All task completed! Current task list number is: ${taskList.size()}.")
         }(rule, policy)
@@ -80,6 +91,13 @@ object AlarmFlow extends Logging {
     }
     WowLog.logInfo("Alarm flow end!")
   }
+
+  def killBatchJob(spark:SparkSession, groupId:String, jobName: String) = {
+    logInfo(s"Try to kill batch job: $groupId, job name: $jobName.")
+    spark.sparkContext.cancelJobGroup(groupId)
+  }
+
+  def nextGroupId = UUID.randomUUID().toString
 
   def sinkAndAlert(filterTable:Dataset[RecordDetail],
                    sinkFunc:Dataset[RecordDetail]=>Unit,
@@ -120,9 +138,8 @@ object AlarmFlow extends Logging {
     }
   }
 
-  def runTask( task:Future[Unit] ): Boolean = {
+  def runTask( task:Future[Unit] ): (Boolean, Option[SQLClubException]) = {
     if (task != null && !task.isDone) {
-
       try {
         task.get(taskTimeOut, TimeUnit.MILLISECONDS)
       } catch {
@@ -130,10 +147,10 @@ object AlarmFlow extends Logging {
           logError(e.getMessage, e)
         case e: TimeoutException =>
           logWarning(e.getMessage, e)
-          return false
+          return (false, Some(new SQLClubException(e.getMessage, e)))
       }
     }
-    true
+    (true, None)
   }
 
   def destroy = {
@@ -144,7 +161,12 @@ object AlarmFlow extends Logging {
       val tasks = unfinishedTasks.iterator()
       while (tasks.hasNext){
         val task = tasks.next()
-        if (runTask(task)) tasks.remove()
+        val result = runTask(task)
+        if (result._1) {
+          tasks.remove()
+        } else {
+          throw result._2.get
+        }
       }
       WowLog.logInfo(s"All task completed! Current task list number is: ${unfinishedTasks.size()}.")
       if (!executors.isShutdown) executors.shutdownNow()
