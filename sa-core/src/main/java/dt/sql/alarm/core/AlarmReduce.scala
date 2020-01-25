@@ -6,7 +6,7 @@ import org.apache.spark.sql.{Dataset, Row, SaveMode}
 import dt.sql.alarm.reduce.PolicyAnalyzeEngine
 import dt.sql.alarm.reduce.engine.ReduceByTime
 import tech.sqlclub.common.utils.JacksonUtils
-import org.apache.spark.sql.functions.{lit, col}
+import org.apache.spark.sql.functions.{col, lit}
 import dt.sql.alarm.core.Constants._
 import dt.sql.alarm.reduce.EngineResult
 import RecordDetail._
@@ -45,25 +45,25 @@ object AlarmReduce extends Logging {
     WowLog.logInfo("Policy Engine Analyze result is :")
     logInfo(engineResults.mkString("\n"))
     
-    addCache(cacheAdding)(policy)
+    addCache(cacheAdding)
 
     engineResults
   }
 
   
-  def addCache(cacheDfs:List[(Dataset[Row], SaveMode)])(implicit polic:AlarmPolicyConf) = {
+  def addCache(cacheDfs:List[(Dataset[Row], SaveMode)]) = {
     cacheDfs.foreach{
       cache =>
         val df = cache._1
         val mode = cache._2
-        val jobInfos = df.groupBy(job_id, job_stat).count().collect().map{
+        val jobInfos = df.groupBy(item_id, job_id, job_stat).count().collect().map{
           row =>
-            (row.getAs[String](job_id), row.getAs[String](job_stat))
+            (row.getAs[String](item_id), row.getAs[String](job_id), row.getAs[String](job_stat))
         }
         jobInfos.foreach{
           jobInfo =>
-            val cacheDf = df.filter(col(job_id) === jobInfo._1 and col(job_stat) === jobInfo._2)
-            val key = AlarmPolicyConf.getCacheKey(polic.item_id, jobInfo._1, jobInfo._2)
+            val cacheDf = df.filter(col(item_id) === jobInfo._1 and col(job_id) === jobInfo._2 and col(job_stat) === jobInfo._3)
+            val key = AlarmPolicyConf.getCacheKey(jobInfo._1, jobInfo._2, jobInfo._3)
             RedisOperations.setListCache(key, cacheDf, mode)
         }
     }

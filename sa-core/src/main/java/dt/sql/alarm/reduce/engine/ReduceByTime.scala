@@ -78,9 +78,9 @@ object ReduceByTime extends PolicyAnalyzeEngine {
     WowLog.logInfo("Noise Reduction Policy: ReduceByTime analysis completed!!")
 
     // 没有产生告警的记录需要入cache
-    val cacheAdding = table.join(alarmRecords, Seq(job_id,job_stat) , "left_outer")
+    val cacheAdding = table.join(alarmRecords, Seq(item_id,job_id,job_stat) , "left_outer")
         .filter(isnull(alarmRecords(SQL_FIELD_VALUE_NAME)))
-        .select(col(job_id), col(job_stat), table(SQL_FIELD_VALUE_NAME))
+        .select(col(item_id), col(job_id), col(job_stat), table(SQL_FIELD_VALUE_NAME))
 
     (firstAlarmRecords ++ streamAlarmRecords, List((cacheAdding, SaveMode.Append)))
   }
