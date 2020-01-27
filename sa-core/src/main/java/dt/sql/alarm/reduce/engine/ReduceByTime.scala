@@ -20,27 +20,27 @@ object ReduceByTime extends PolicyAnalyzeEngine {
     WowLog.logInfo("Noise Reduction Policy: ReduceByTime analyzing....")
 
     // filter alarm records
-    val table = records.filter(col(RecordDetail.alarm) === 1)
+    val table = records.filter(col(alarm) === 1)
 
     // group by job_id,job_stat order by event_time desc
     val table_rank = table
       .withColumn(SQL_FIELD_CURRENT_RECORD_NAME, first(SQL_FIELD_VALUE_NAME)      // current record value
-        over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) orderBy col(RecordDetail.event_time).desc ) )
+        over( Window.partitionBy(item_id, job_id, job_stat) orderBy col(event_time).desc ) )
       .withColumn(SQL_FIELD_EARLIEST_RECORD_NAME, last(SQL_FIELD_VALUE_NAME)      // first record value
-        over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) ) )
-      .withColumn(SQL_FIELD_CURRENT_EVENT_TIME_NAME, first(RecordDetail.event_time)   // current event time
-        over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) orderBy col(RecordDetail.event_time).desc ) )
-      .withColumn(SQL_FIELD_EARLIEST_EVENT_TIME_NAME, last(RecordDetail.event_time)   // first event time
-        over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) ) )
+        over( Window.partitionBy(item_id, job_id, job_stat) ) )
+      .withColumn(SQL_FIELD_CURRENT_EVENT_TIME_NAME, first(event_time)   // current event time
+        over( Window.partitionBy(item_id, job_id, job_stat) orderBy col(event_time).desc ) )
+      .withColumn(SQL_FIELD_EARLIEST_EVENT_TIME_NAME, last(event_time)   // first event time
+        over( Window.partitionBy(item_id, job_id, job_stat) ) )
       .withColumn(SQL_FIELD_RANK_NAME, row_number()                                  // rank value
-        over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) orderBy col(RecordDetail.event_time).desc ) )
+        over( Window.partitionBy(item_id, job_id, job_stat) orderBy col(event_time).desc ) )
       .withColumn(SQL_FIELD_DATAFROM_NAME, min(SQL_FIELD_DATAFROM_NAME)              // datafrom value is cache if has record which from redis cache
-        over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) ) )
+        over( Window.partitionBy(item_id, job_id, job_stat) ) )
       .withColumn(SQL_FIELD_COUNT_NAME, count(lit(1))                        // record count
-        over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) ) )
+        over( Window.partitionBy(item_id, job_id, job_stat) ) )
 
     val pendingRecords = table_rank.filter(col(SQL_FIELD_RANK_NAME) === 1).
-      select(SQL_FIELD_CURRENT_EVENT_TIME_NAME,SQL_FIELD_CURRENT_RECORD_NAME,
+      select(item_id, job_id, job_stat, SQL_FIELD_CURRENT_EVENT_TIME_NAME,SQL_FIELD_CURRENT_RECORD_NAME,
         SQL_FIELD_EARLIEST_EVENT_TIME_NAME,SQL_FIELD_EARLIEST_RECORD_NAME,SQL_FIELD_DATAFROM_NAME,SQL_FIELD_COUNT_NAME)
 
     // first alarm
