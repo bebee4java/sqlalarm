@@ -19,9 +19,8 @@ object ReduceByTime extends PolicyAnalyzeEngine {
   override def analyse(policy: AlarmPolicyConf, records: Dataset[Row]): (Array[EngineResult], List[(Dataset[Row], SaveMode)]) = {
     WowLog.logInfo("Noise Reduction Policy: ReduceByTime analyzing....")
 
-    val fields = RecordDetail.getAllFieldName.flatMap(field=> List(lit(field), col(field)) )
     // filter alarm records
-    val table = records.withColumn(SQL_FIELD_VALUE_NAME, to_json(map(fields: _*))).filter(col(RecordDetail.alarm) === 1)
+    val table = records.filter(col(RecordDetail.alarm) === 1)
 
     // group by job_id,job_stat order by event_time desc
     val table_rank = table
@@ -35,7 +34,7 @@ object ReduceByTime extends PolicyAnalyzeEngine {
         over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) ) )
       .withColumn(SQL_FIELD_RANK_NAME, row_number()                                  // rank value
         over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) orderBy col(RecordDetail.event_time).desc ) )
-      .withColumn(SQL_FIELD_DATAFROM_NAME, min(SQL_FIELD_DATAFROM_NAME)              // datafrom value
+      .withColumn(SQL_FIELD_DATAFROM_NAME, min(SQL_FIELD_DATAFROM_NAME)              // datafrom value is cache if has record which from redis cache
         over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) ) )
       .withColumn(SQL_FIELD_COUNT_NAME, count(lit(1))                        // record count
         over( Window.partitionBy(RecordDetail.job_id, RecordDetail.job_stat) ) )
@@ -79,7 +78,7 @@ object ReduceByTime extends PolicyAnalyzeEngine {
 
     // 没有产生告警的记录需要入cache
     val cacheAdding = table.join(alarmRecords, Seq(item_id,job_id,job_stat) , "left_outer")
-        .filter(isnull(alarmRecords(SQL_FIELD_VALUE_NAME)))
+        .filter(isnull(alarmRecords(SQL_FIELD_VALUE_NAME))).orderBy(col(event_time))
         .select(col(item_id), col(job_id), col(job_stat), table(SQL_FIELD_VALUE_NAME))
 
     (firstAlarmRecords ++ streamAlarmRecords, List((cacheAdding, SaveMode.Append)))

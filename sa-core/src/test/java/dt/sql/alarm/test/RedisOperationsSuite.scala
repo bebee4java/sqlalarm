@@ -122,9 +122,19 @@ class RedisOperationsSuite extends FunSuite {
 
 
   test("ops") {
-    ConfigUtils.configBuilder(Map(appName -> "RedisOperationsSuite", master -> "local[2]"))
+    ConfigUtils.configBuilder(Map(
+      appName -> "RedisOperationsSuite",
+      master -> "local[2]",
+      "spark.redis.host" -> "127.0.0.1",
+      "spark.redis.port" -> "6379",
+      "spark.redis.db" -> "4"
+    ))
     val spark = SparkRuntime.getSparkSession
     val rdd = RedisOperations.getListCache("test:111*")
+
+    val map = RedisOperations.getTableCache("sqlalarm_policy*")
+    val conf = map.collect().toMap
+
 
     import spark.implicits._
     val ds = rdd.toDS()

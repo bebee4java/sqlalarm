@@ -6,7 +6,7 @@ import tech.sqlclub.common.log.Logging
 
 object AlarmAlert extends Logging {
 
-  def push(results:Array[EngineResult]) : Unit = {
+  def push(results:Array[EngineResult], forceCleanCache:Boolean = false) : Unit = {
     results.filter(_.hasWarning).foreach {
       result =>
         logInfo(result.toString)
@@ -14,7 +14,7 @@ object AlarmAlert extends Logging {
         val firstEventTime = result.firstAlarmRecord.event_time
         val count = result.reduceCount
         WowLog.logInfo(s"this moment the record has warning! Agg count: $count")
-        if ( send(AlarmRecord.as(recordDetail), firstEventTime, count) && count >1 ) {
+        if ( send(AlarmRecord.as(recordDetail), firstEventTime, count) && (count >1 || forceCleanCache) ) {
           val key = AlarmPolicyConf.getCacheKey(recordDetail.item_id, recordDetail.job_id, recordDetail.job_stat)
           RedisOperations.delCache(key)
           WowLog.logInfo(s"agg over, del the cache! key: $key")

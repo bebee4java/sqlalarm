@@ -106,7 +106,7 @@ object AlarmFlow extends Logging {
     try {
       filterTable.persist()
       if (filterTable.count() == 0) {
-        WowLog.logInfo("filterTable is empty, don't need to need sink and alert functions return directly!")
+        WowLog.logInfo("filterTable is empty, don't need to run sink and alert functions return directly!")
         return
       }
 

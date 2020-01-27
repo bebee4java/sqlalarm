@@ -1,10 +1,14 @@
 package dt.sql.alarm
 
-import dt.sql.alarm.core.{AlarmFlow, SparkRuntime}
+import dt.sql.alarm.core._
 import core.Constants._
-import tech.sqlclub.common.utils.{ConfigUtils, ParamsUtils}
+import org.apache.spark.{SparkException, TaskContext}
+import tech.sqlclub.common.utils.{ConfigUtils, JacksonUtils, ParamsUtils}
 
 object SQLAlarmBoot {
+
+  // 5 min
+  val daemonCleanInterval = 5*60*1000L
 
   def main(args: Array[String]): Unit = {
 
@@ -25,8 +29,56 @@ object SQLAlarmBoot {
 
     SparkRuntime.parseProcessAndSink(spark)
 
+    var completed = false
+    if (ConfigUtils.hasConfig(SQLALARM_ALERT)) {
+      val partitionNum = SparkRuntime.sparkConfMap.getOrElse(Constants.redisCacheDataPartitionNum,
+        ConfigUtils.getStringValue(Constants.redisCacheDataPartitionNum, "3")).toInt
+      def launchCleaner = {
+        import spark.implicits._
+        // 启动alarm cache后台清理
+        WowLog.logInfo("SQLAlarm cache daemon cleaner start......")
+        spark.sparkContext.setJobGroup("SQLAlarm Cache clean group", s"sqlalarm cache daemon cleaner", true)
+        spark.sparkContext.parallelize(Seq("alarm-cache-clean-server"), 1).map { item =>
+          while ( !TaskContext.get().isInterrupted() ) {
+            val rdd = RedisOperations.getListCache(ALARM_CACHE + "*", partitionNum)
+            if (rdd.count() > 0) {
+              val cacheRecords = rdd.map{
+                row =>
+                  JacksonUtils.fromJson[RecordDetail](row, classOf[RecordDetail])
+              }.toDS
+
+              val results = AlarmReduce.cacheReduce(cacheRecords)
+              AlarmAlert.push(results, true) // Force clean cache after sending
+            }
+            Thread.sleep(daemonCleanInterval)
+          }
+
+        }.collect()
+      }
+      new Thread("launch-cache-cleaner-in-spark-job") {
+        setDaemon(true)
+        override def run(): Unit = {
+          while (!completed) {
+            try {
+              launchCleaner
+            }catch {
+              case e:SparkException =>
+                e.printStackTrace()
+            }
+            WowLog.logInfo("SQLAlarm cache daemon cleaner exited, restarted after 60 seconds!")
+            if (!completed) Thread.sleep(60000)
+          }
+
+        }
+      }.start()
+
+    }
+
     if ( SparkRuntime.streamingQuery != null )
       SparkRuntime.streamingQuery.awaitTermination()
+
+    // 设置completed标志为true
+    completed = true
 
     if (!spark.sparkContext.isStopped) spark.sparkContext.stop()
 

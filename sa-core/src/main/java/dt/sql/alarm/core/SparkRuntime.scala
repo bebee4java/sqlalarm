@@ -130,15 +130,17 @@ object RedisOperations {
 
   lazy private val redisEndpoint = RedisConfig.fromSparkConf(sc.getConf).initialHost
 
-  def IncorrectMsg(param:String) = s"RedisOperations $param should be String or Array[String]"
+  def IncorrectMsg = s"RedisOperations keysOrKeyPattern should be String or Array[String]"
 
-  def getTableCache[T](keysOrKeyPattern: T):RDD[(String, String)] = {
+  def getTableCache[T](keysOrKeyPattern: T, partitionNum:Int):RDD[(String, String)] = {
     keysOrKeyPattern match {
-      case keyPattern: String => sc.fromRedisHash(keyPattern.asInstanceOf[String])
-      case keys: Array[String] => sc.fromRedisHash(keys.asInstanceOf[Array[String]])
-      case _ => throw new SQLClubException(IncorrectMsg("keysOrKeyPattern"))
+      case keyPattern: String => sc.fromRedisHash(keyPattern.asInstanceOf[String], partitionNum)
+      case keys: Array[String] => sc.fromRedisHash(keys.asInstanceOf[Array[String]], partitionNum)
+      case _ => throw new SQLClubException(IncorrectMsg)
     }
   }
+
+  def getTableCache[T](keysOrKeyPattern: T):RDD[(String, String)] = getTableCache(keysOrKeyPattern, 3)
 
   def getTableCache(key: String, field:String)
     (implicit conn:Jedis = redisEndpoint.connect()):String = {
@@ -158,11 +160,11 @@ object RedisOperations {
   }
 
 
-  def getListCache[T](keysOrKeyPattern:T):RDD[String] = {
+  def getListCache[T](keysOrKeyPattern:T, partitionNum:Int=3):RDD[String] = {
     keysOrKeyPattern match {
-      case keyPattern: String => sc.fromRedisList(keyPattern.asInstanceOf[String])
-      case keys: Array[String] => sc.fromRedisList(keys.asInstanceOf[Array[String]])
-      case _ => throw new SQLClubException(IncorrectMsg("keysOrKeyPattern"))
+      case keyPattern: String => sc.fromRedisList(keyPattern.asInstanceOf[String], partitionNum)
+      case keys: Array[String] => sc.fromRedisList(keys.asInstanceOf[Array[String]], partitionNum)
+      case _ => throw new SQLClubException(IncorrectMsg)
     }
 
   }
@@ -185,15 +187,8 @@ object RedisOperations {
     sc.toRedisLIST(rdd, key, ttl)
   }
 
-  def delCache[T](keyOrArrayKey: T)
+  def delCache(keys:String*)
     (implicit conn:Jedis = redisEndpoint.connect()): Long = {
-
-    val keys = keyOrArrayKey match {
-      case key: String => Array(key.asInstanceOf[String])
-      case keys: Array[String] => keys.asInstanceOf[Array[String]]
-      case _ => throw new SQLClubException(IncorrectMsg("keyOrArrayKey"))
-    }
-
     ConnectionUtils.withConnection[Long](conn) {
       conn =>
         conn.del(keys:_*)

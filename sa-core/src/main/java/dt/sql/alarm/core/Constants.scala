@@ -11,6 +11,7 @@ object Constants {
   val trigger = "spark.streaming.trigger.time.interval.msec"
   val futureTaskTimeOut = "spark.streaming.future.task.timeout.msec"
   val futureTasksThreadPoolSize = "spark.streaming.future.tasks.threadPool.size"
+  val redisCacheDataPartitionNum = "spark.redis.cache.data.partition.num"
 
   val SQLALARM_SOURCES = "sqlalarm.sources"
   val SQLALARM_SINKS = "sqlalarm.sinks"
@@ -38,6 +39,10 @@ object Constants {
   val SQL_FIELD_RANK_NAME = "rank"
   val SQL_FIELD_MAXRANK_NAME = "maxRank"
   val SQL_FIELD_COUNT_NAME = "count"
+
+  val SQL_FIELD_CACHE_DURATION = "cache_duration"
+  val SQL_FIELD_CACHE_ADD_INTERVAL = "cache_add_interval"
+  val SQL_FIELD_CACHE_UNTIL_TIME = "cache_until_time"
 
 
 }
