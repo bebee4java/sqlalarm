@@ -1,7 +1,8 @@
 package dt.sql.alarm.test
 
-import dt.sql.alarm.core.Constants.{appName, master}
+import dt.sql.alarm.core.Constants.{ALARM_CACHE, appName, master}
 import dt.sql.alarm.core.{RecordDetail, RedisOperations, SparkRuntime}
+import org.apache.spark.sql.SaveMode
 import org.scalatest.FunSuite
 import tech.sqlclub.common.utils.{ConfigUtils, JacksonUtils}
 
@@ -121,6 +122,41 @@ class RedisOperationsSuite extends FunSuite {
   }
 
 
+  test("cache") {
+    ConfigUtils.configBuilder(Map(
+      appName -> "RedisOperationsSuite",
+      master -> "local[2]",
+      "spark.redis.host" -> "127.0.0.1",
+      "spark.redis.port" -> "6379",
+      "spark.redis.db" -> "4"
+    ))
+
+    val spark = SparkRuntime.getSparkSession
+
+    val key = "sqlalarm_cache:uuid00000001:sqlalarm_job_001:Fail"
+
+    val json = JacksonUtils.prettyPrint[RecordDetail](RecordDetail(
+      "jobid",
+      "fail",
+      "2019",
+      "sss",
+      "cont",
+      "title",
+      "ppp",
+      "001",
+      "sss",
+      "tt",
+      1
+    ))
+
+    val rdd = spark.sparkContext.parallelize(Seq(json), 1)
+
+
+    RedisOperations.setListCache(key, rdd, SaveMode.Overwrite)
+
+
+  }
+
   test("ops") {
     ConfigUtils.configBuilder(Map(
       appName -> "RedisOperationsSuite",
@@ -154,7 +190,6 @@ class RedisOperationsSuite extends FunSuite {
     val c = tb.union(ds).count()
 
     println(c)
-
 
   }
 

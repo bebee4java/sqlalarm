@@ -33,28 +33,29 @@ object SQLAlarmBoot {
     if (ConfigUtils.hasConfig(SQLALARM_ALERT)) {
       val partitionNum = SparkRuntime.sparkConfMap.getOrElse(Constants.redisCacheDataPartitionNum,
         ConfigUtils.getStringValue(Constants.redisCacheDataPartitionNum, "3")).toInt
+
       def launchCleaner = {
-        import spark.implicits._
         // 启动alarm cache后台清理
         WowLog.logInfo("SQLAlarm cache daemon cleaner start......")
-        spark.sparkContext.setJobGroup("SQLAlarm Cache clean group", s"sqlalarm cache daemon cleaner", true)
-        spark.sparkContext.parallelize(Seq("alarm-cache-clean-server"), 1).map { item =>
-          while ( !TaskContext.get().isInterrupted() ) {
-            val rdd = RedisOperations.getListCache(ALARM_CACHE + "*", partitionNum)
-            if (rdd.count() > 0) {
-              val cacheRecords = rdd.map{
-                row =>
-                  JacksonUtils.fromJson[RecordDetail](row, classOf[RecordDetail])
-              }.toDS
+        var batchId = 1
+        while ( SparkRuntime.streamingQuery != null && SparkRuntime.streamingQuery.isActive ) {
+          spark.sparkContext.setJobGroup("SQLAlarm cache clean group", s"cache-clean-batch-$batchId", true)
+          val rdd = RedisOperations.getListCache(ALARM_CACHE + "*", partitionNum)
+          if (rdd.count() > 0) {
+            import spark.implicits._
+            val cacheRecords = rdd.map{
+              row =>
+                JacksonUtils.fromJson[RecordDetail](row, classOf[RecordDetail])
+            }.toDS
 
-              val results = AlarmReduce.cacheReduce(cacheRecords)
-              AlarmAlert.push(results, true) // Force clean cache after sending
-            }
-            Thread.sleep(daemonCleanInterval)
+            val results = AlarmReduce.cacheReduce(cacheRecords)
+            AlarmAlert.push(results, true) // Force clean cache after sending
           }
-
-        }.collect()
+          batchId = batchId + 1
+          Thread.sleep(daemonCleanInterval)
+        }
       }
+
       new Thread("launch-cache-cleaner-in-spark-job") {
         setDaemon(true)
         override def run(): Unit = {
@@ -62,7 +63,7 @@ object SQLAlarmBoot {
             try {
               launchCleaner
             }catch {
-              case e:SparkException =>
+              case e:Exception =>
                 e.printStackTrace()
             }
             WowLog.logInfo("SQLAlarm cache daemon cleaner exited, restarted after 60 seconds!")
