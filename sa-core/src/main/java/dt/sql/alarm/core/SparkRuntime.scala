@@ -1,13 +1,13 @@
 package dt.sql.alarm.core
 
 import org.apache.spark.{SparkConf, SparkContext}
-import org.apache.spark.sql.{DataFrame, Dataset, SaveMode, SparkSession}
 import dt.sql.alarm.input.SourceInfo
 import Constants._
 import dt.sql.alarm.filter.SQLFilter
 import dt.sql.alarm.output.SinkInfo
 import dt.sql.alarm.reduce.EngineResult
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import tech.sqlclub.common.log.Logging
 import tech.sqlclub.common.utils.ConfigUtils
 import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
@@ -179,9 +179,8 @@ object RedisOperations {
     }
     import spark.implicits._
     val rdd = data match {
-      case rdd:RDD[String] => rdd
-      case ds:Dataset[String] => ds.rdd
-      case df:DataFrame => df.as[String].rdd
+      case rdd:RDD[String] => rdd.filter(s => s != null && s.nonEmpty).map(s => s.toString)
+      case df:DataFrame => df.filter(_ != null).map(row => row.getAs[String](0)).rdd
     }
 
     sc.toRedisLIST(rdd, key, ttl)

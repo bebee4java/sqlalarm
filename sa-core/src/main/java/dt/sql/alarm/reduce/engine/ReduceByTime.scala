@@ -16,7 +16,7 @@ import dt.sql.alarm.core.RecordDetail._
   */
 object ReduceByTime extends PolicyAnalyzeEngine {
 
-  override def analyse(policy: AlarmPolicyConf, records: Dataset[Row]): (Array[EngineResult], List[(Dataset[Row], SaveMode)]) = {
+  override def analyse(policy: AlarmPolicyConf, records: Dataset[Row]):Array[EngineResult] = {
     WowLog.logInfo("Noise Reduction Policy: ReduceByTime analyzing....")
 
     // filter alarm records
@@ -43,44 +43,52 @@ object ReduceByTime extends PolicyAnalyzeEngine {
       select(item_id, job_id, job_stat, SQL_FIELD_CURRENT_EVENT_TIME_NAME,SQL_FIELD_CURRENT_RECORD_NAME,
         SQL_FIELD_EARLIEST_EVENT_TIME_NAME,SQL_FIELD_EARLIEST_RECORD_NAME,SQL_FIELD_DATAFROM_NAME,SQL_FIELD_COUNT_NAME)
 
-    // first alarm
-    val firstAlarmRecords = if (policy.policy.alertFirst) {
-      val firstAlarmRecords = pendingRecords.filter(
-        col(SQL_FIELD_DATAFROM_NAME) === SQL_FIELD_STREAM_NAME and  // only from stream
-        col(SQL_FIELD_COUNT_NAME) === 1  // and count=1
-      )
+    pendingRecords.persist()
 
-      firstAlarmRecords.collect().map {
-        row=>
-          val firstAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_CURRENT_RECORD_NAME), classOf[RecordDetail])
-          EngineResult(true, firstAlarmRecord, firstAlarmRecord, 1)
+    try {
+      // first alarm
+      val firstAlarmRecords = if (policy.policy.alertFirst) {
+        val firstAlarmRecords = pendingRecords.filter(
+          col(SQL_FIELD_DATAFROM_NAME) === SQL_FIELD_STREAM_NAME and  // only from stream
+            col(SQL_FIELD_COUNT_NAME) === 1  // and count=1
+        )
+
+        firstAlarmRecords.collect().map {
+          row=>
+            val firstAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_CURRENT_RECORD_NAME), classOf[RecordDetail])
+            EngineResult(true, firstAlarmRecord, firstAlarmRecord, 1)
+        }
+
+      } else {
+        Array(EngineResult(false, null, null, -1))
       }
 
-    } else {
-      Array(EngineResult(false, null, null, -1))
+      // over time window
+      val alarmRecords = pendingRecords.filter(
+        unix_timestamp(col(SQL_FIELD_CURRENT_EVENT_TIME_NAME)) -
+          unix_timestamp(col(SQL_FIELD_EARLIEST_EVENT_TIME_NAME)) >= policy.window.getTimeWindowSec
+      )
+
+      val streamAlarmRecords = alarmRecords.collect().map{
+        row =>
+          val lastAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_CURRENT_RECORD_NAME), classOf[RecordDetail])
+          val firstAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_EARLIEST_RECORD_NAME), classOf[RecordDetail])
+          val count = row.getAs[Long](SQL_FIELD_COUNT_NAME)
+          EngineResult(true, lastAlarmRecord, firstAlarmRecord, count.intValue())
+      }
+
+      WowLog.logInfo("Noise Reduction Policy: ReduceByTime analysis completed!!")
+
+      // 没有产生告警的记录需要入cache
+      val cacheDF = table.join(alarmRecords, Seq(item_id,job_id,job_stat) , "left_outer")
+        .filter(isnull(alarmRecords(SQL_FIELD_CURRENT_EVENT_TIME_NAME)))
+        .select(col(item_id), col(job_id), col(job_stat), col(event_time), col(SQL_FIELD_VALUE_NAME))
+
+      addCache(cacheDF, SaveMode.Append)
+
+      firstAlarmRecords ++ streamAlarmRecords
+    } finally {
+      pendingRecords.unpersist()
     }
-
-    // over time window
-    val alarmRecords = pendingRecords.filter(
-      unix_timestamp(col(SQL_FIELD_CURRENT_EVENT_TIME_NAME)) -
-        unix_timestamp(col(SQL_FIELD_EARLIEST_EVENT_TIME_NAME)) >= policy.window.getTimeWindowSec
-    )
-
-    val streamAlarmRecords = alarmRecords.collect().map{
-      row =>
-        val lastAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_CURRENT_RECORD_NAME), classOf[RecordDetail])
-        val firstAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_EARLIEST_RECORD_NAME), classOf[RecordDetail])
-        val count = row.getAs[Long](SQL_FIELD_COUNT_NAME)
-        EngineResult(true, lastAlarmRecord, firstAlarmRecord, count.intValue())
-    }
-
-    WowLog.logInfo("Noise Reduction Policy: ReduceByTime analysis completed!!")
-
-    // 没有产生告警的记录需要入cache
-    val cacheAdding = table.join(alarmRecords, Seq(item_id,job_id,job_stat) , "left_outer")
-        .filter(isnull(alarmRecords(SQL_FIELD_VALUE_NAME))).orderBy(col(event_time))
-        .select(col(item_id), col(job_id), col(job_stat), table(SQL_FIELD_VALUE_NAME))
-
-    (firstAlarmRecords ++ streamAlarmRecords, List((cacheAdding, SaveMode.Append)))
   }
 }
