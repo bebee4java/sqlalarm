@@ -2,7 +2,6 @@ package dt.sql.alarm
 
 import dt.sql.alarm.core._
 import core.Constants._
-import org.apache.spark.{SparkException, TaskContext}
 import tech.sqlclub.common.utils.{ConfigUtils, JacksonUtils, ParamsUtils}
 
 object SQLAlarmBoot {
@@ -37,7 +36,7 @@ object SQLAlarmBoot {
       def launchCleaner = {
         // 启动alarm cache后台清理
         WowLog.logInfo("SQLAlarm cache daemon cleaner start......")
-        var batchId = 1
+        var batchId:Long = 1L
         while ( SparkRuntime.streamingQuery != null && SparkRuntime.streamingQuery.isActive ) {
           spark.sparkContext.setJobGroup("SQLAlarm cache clean group", s"cache-clean-batch-$batchId", true)
           val rdd = RedisOperations.getListCache(ALARM_CACHE + "*", partitionNum)
