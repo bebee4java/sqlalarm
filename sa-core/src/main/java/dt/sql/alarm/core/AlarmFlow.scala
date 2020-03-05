@@ -112,14 +112,16 @@ object AlarmFlow extends Logging {
       }
 
       // alarm data sink
-      val sinkTask = executors.submit(new Callable[Unit] {
-        override def call(): Unit ={
-          WowLog.logInfo("AlarmFlow table sink...")
-          sinkFunc(filterTable)
-          WowLog.logInfo("AlarmFlow table sink task will be executed in the future!")
-        }
-      })
-      taskList.add(sinkTask)
+      if (ConfigUtils.hasConfig(SQLALARM_SINKS)) {
+        val sinkTask = executors.submit(new Callable[Unit] {
+          override def call(): Unit ={
+            WowLog.logInfo("AlarmFlow table sink...")
+            sinkFunc(filterTable)
+            WowLog.logInfo("AlarmFlow table sink task will be executed in the future!")
+          }
+        })
+        taskList.add(sinkTask)
+      }
 
       // alarm record alert
       if (ConfigUtils.hasConfig(SQLALARM_ALERT)){

@@ -84,6 +84,7 @@ object SQLFilter extends Logging {
     import dt.sql.alarm.conf.PolicyType._
     val result = if (policy != null && policy.policy.`type`.isScale){
 
+      // 目前过滤sql只支持单条简单sql 可以union
       val project = sqlPlan match {
         case p if p.isInstanceOf[Union] => p.children.head.asInstanceOf[Project]
         case p if p.isInstanceOf[Project] => p.asInstanceOf[Project]

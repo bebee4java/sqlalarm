@@ -70,6 +70,7 @@ object SparkRuntime extends Logging {
             val alarmRecords = if (null != policy) {
               AlarmReduce.reduce(table, policy) // alarm noise reduction
             } else {
+              // 没配置策略每条都push
               table.collect().map{
                 record =>
                   EngineResult(true, record, record, 1)
@@ -115,7 +116,12 @@ object SparkRuntime extends Logging {
         logInfo(s"spark stream create source $sourceName!")
         SourceInfo.getSource(sourceName).getDataSetStream(spark)
     }
-
+/*
+    root
+    |-- source: string (nullable = false)
+    |-- topic: string (nullable = false)
+    |-- value: string (nullable = false)
+*/
     sources.filter(_ != null).reduce(_ union _)
   }
 }

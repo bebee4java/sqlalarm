@@ -74,11 +74,14 @@ object AlarmReduce extends Logging {
     val pendingRecords = table.filter(col(SQL_FIELD_RANK_NAME) === 1).
       select(item_id, job_id, job_stat, SQL_FIELD_CURRENT_EVENT_TIME_NAME,SQL_FIELD_CURRENT_RECORD_NAME,
         SQL_FIELD_EARLIEST_EVENT_TIME_NAME,SQL_FIELD_EARLIEST_RECORD_NAME,SQL_FIELD_COUNT_NAME)
+      // cache duration field
       .withColumn(SQL_FIELD_CACHE_DURATION,
         unix_timestamp(col(SQL_FIELD_CURRENT_EVENT_TIME_NAME)) - unix_timestamp(col(SQL_FIELD_EARLIEST_EVENT_TIME_NAME)))
+      // cache add interval
       .withColumn(SQL_FIELD_CACHE_ADD_INTERVAL,
         (unix_timestamp(col(SQL_FIELD_CURRENT_EVENT_TIME_NAME)) - unix_timestamp(col(SQL_FIELD_EARLIEST_EVENT_TIME_NAME)))/col(SQL_FIELD_COUNT_NAME)
       )
+      // cache util time
       .withColumn(SQL_FIELD_CACHE_UNTIL_TIME,
         unix_timestamp() - unix_timestamp(col(SQL_FIELD_EARLIEST_EVENT_TIME_NAME))
       )
@@ -111,12 +114,15 @@ object AlarmReduce extends Logging {
               }
               if (overWindow) {
                 (policyType, windowType) match {
+                  // 按比例聚合 时间+次数聚合 这两种超出窗口了直接清除不需要push
                   case (PolicyType.scale, _) | (PolicyType.absolute, WindowType.timeCount) =>
                     WowLog.logInfo("the cache has not been merged for a long time, the cache is useless, del it!")
                     RedisOperations.delCache(key)
                     EngineResult(false, null, null, -1)
+                  // 按时间聚合 次数聚合 这两种超出窗口需要把历史聚合后push
                   case (PolicyType.absolute, WindowType.time) | (PolicyType.absolute, WindowType.number) =>
                     if (count == 1 && policy.policy.alertFirst ) {
+                      // 缓存仅有一条 且 第一次已告警 直接清理不需要push
                       WowLog.logInfo("this alarm record has been pushed, del it!")
                       RedisOperations.delCache(key)
                       EngineResult(false, null, null, -1)

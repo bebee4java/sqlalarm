@@ -14,6 +14,7 @@ object AlarmAlert extends Logging {
         val firstEventTime = result.firstAlarmRecord.event_time
         val count = result.reduceCount
         WowLog.logInfo(s"this moment the record has warning! Agg count: $count")
+        // forceCleanCache 参数为了处理 首次不告警但过期的告警记录 仅当存在一条这种情况的时候强制删除缓存
         if ( send(AlarmRecord.as(recordDetail), firstEventTime, count) && (count >1 || forceCleanCache) ) {
           val key = AlarmPolicyConf.getCacheKey(recordDetail.item_id, recordDetail.job_id, recordDetail.job_stat)
           RedisOperations.delCache(key)
