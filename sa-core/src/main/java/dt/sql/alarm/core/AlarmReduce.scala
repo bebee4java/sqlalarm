@@ -23,7 +23,7 @@ object AlarmReduce extends Logging {
 
   // RecordDetail all fields
   lazy val fields = RecordDetail.getAllFieldName.flatMap(field=> List(lit(field), col(field)) )
-  
+
   def reduce(data:Dataset[RecordDetail], policy: AlarmPolicyConf): Array[EngineResult] = {
     val spark = data.sparkSession
     val engine = getPolicyAnalyzeEngine(policy.policy.`type`, policy.window.`type`)
@@ -48,8 +48,8 @@ object AlarmReduce extends Logging {
     val result = engine.analyse(policy, table)
 
 
-    WowLog.logInfo("Policy Engine Analyze result is :")
-    logInfo(result.mkString("\n"))
+    WowLog.logInfo("Policy Engine Analyze hasWarning result is :")
+    logInfo(result.filter(_.hasWarning).mkString("\n"))
 
     result
   }
@@ -86,11 +86,11 @@ object AlarmReduce extends Logging {
         unix_timestamp() - unix_timestamp(col(SQL_FIELD_EARLIEST_EVENT_TIME_NAME))
       )
 
+    val policies = RedisOperations.getTableCache(ALARM_POLICY + "*")
+    val policyMap = policies.map(item => (item._1, AlarmPolicyConf.formJson(item._2))).collect().toMap
     import spark.implicits._
     pendingRecords.mapPartitions{
       partition =>
-        val policies = RedisOperations.getTableCache(ALARM_POLICY + "*")
-        val policyMap = policies.map(item => (item._1, AlarmPolicyConf.formJson(item._2))).collect().toMap
         partition.map{
           row =>
             val itemId = row.getAs[String](item_id)
