@@ -95,6 +95,7 @@ object AlarmFlow extends Logging {
   def killBatchJob(spark:SparkSession, groupId:String, jobName: String) = {
     logInfo(s"Try to kill batch job: $groupId, job name: $jobName.")
     spark.sparkContext.cancelJobGroup(groupId)
+    logInfo(s"Batch job: $groupId killed! Job name: $jobName.")
   }
 
   def nextGroupId = UUID.randomUUID().toString

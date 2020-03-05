@@ -82,7 +82,7 @@ object SQLFilter extends Logging {
     filtertab.printSchema()
 
     import dt.sql.alarm.conf.PolicyType._
-    val result = if (policy.policy.`type`.isScale){
+    val result = if (policy != null && policy.policy.`type`.isScale){
 
       val project = sqlPlan match {
         case p if p.isInstanceOf[Union] => p.children.head.asInstanceOf[Project]
