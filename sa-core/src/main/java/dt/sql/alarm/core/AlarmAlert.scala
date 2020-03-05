@@ -9,7 +9,6 @@ object AlarmAlert extends Logging {
   def push(results:Array[EngineResult], forceCleanCache:Boolean = false) : Unit = {
     results.filter(_.hasWarning).foreach {
       result =>
-        logInfo(result.toString)
         val recordDetail = result.lastAlarmRecord
         val firstEventTime = result.firstAlarmRecord.event_time
         val count = result.reduceCount

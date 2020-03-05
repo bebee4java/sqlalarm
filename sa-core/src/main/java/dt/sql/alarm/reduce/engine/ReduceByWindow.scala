@@ -88,7 +88,7 @@ class ReduceByWindow(window: Window) extends PolicyAnalyzeEngine {
           EngineResult(true, lastAlarmRecord, firstAlarmRecord, count.intValue())
       }
 
-      WowLog.logInfo("Noise Reduction Policy: ReduceByTime analysis completed!!")
+      WowLog.logInfo(s"Noise Reduction Policy: ReduceByWindow analysis completed! windowType:${policy.window.`type`}, alarm records size:${streamAlarmRecords.length}")
 
       // 没有产生告警的记录需要入cache
       val cacheDF = table.join(alarmRecords, Seq(item_id,job_id,job_stat) , "left_outer")
