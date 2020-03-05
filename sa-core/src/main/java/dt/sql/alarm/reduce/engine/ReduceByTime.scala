@@ -81,7 +81,7 @@ object ReduceByTime extends PolicyAnalyzeEngine {
 
       // 没有产生告警的记录需要入cache
       val cacheDF = table.join(alarmRecords, Seq(item_id,job_id,job_stat) , "left_outer")
-        .filter(isnull(alarmRecords(SQL_FIELD_CURRENT_EVENT_TIME_NAME)))
+        .filter(isnull(alarmRecords(SQL_FIELD_CURRENT_EVENT_TIME_NAME)) and table(SQL_FIELD_DATAFROM_NAME) === SQL_FIELD_STREAM_NAME) // 只加流记录
         .select(col(item_id), col(job_id), col(job_stat), col(event_time), col(SQL_FIELD_VALUE_NAME))
 
       addCache(cacheDF, SaveMode.Append)
