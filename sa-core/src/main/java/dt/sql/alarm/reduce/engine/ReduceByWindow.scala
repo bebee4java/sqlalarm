@@ -14,7 +14,7 @@ import dt.sql.alarm.core.RecordDetail._
   *
   * Created by songgr on 2020/01/09.
   */
-object ReduceByTime extends PolicyAnalyzeEngine {
+class ReduceByWindow(window: Window) extends PolicyAnalyzeEngine {
 
   override def analyse(policy: AlarmPolicyConf, records: Dataset[Row]):Array[EngineResult] = {
     WowLog.logInfo("Noise Reduction Policy: ReduceByTime analyzing....")
@@ -63,11 +63,22 @@ object ReduceByTime extends PolicyAnalyzeEngine {
         Array(EngineResult(false, null, null, -1))
       }
 
-      // over time window
-      val alarmRecords = pendingRecords.filter(
-        unix_timestamp(col(SQL_FIELD_CURRENT_EVENT_TIME_NAME)) -
-          unix_timestamp(col(SQL_FIELD_EARLIEST_EVENT_TIME_NAME)) >= policy.window.getTimeWindowSec
-      )
+      val alarmRecords = window match {
+        case NumberWindow =>
+          pendingRecords.filter(col(SQL_FIELD_COUNT_NAME) > policy.window.value )
+        case TimeWindow =>
+          pendingRecords.filter(
+            unix_timestamp(col(SQL_FIELD_CURRENT_EVENT_TIME_NAME)) -
+              unix_timestamp(col(SQL_FIELD_EARLIEST_EVENT_TIME_NAME)) >= policy.window.getTimeWindowSec
+          )
+        case TimeCountWindow =>
+          pendingRecords.filter(
+            unix_timestamp(col(SQL_FIELD_CURRENT_EVENT_TIME_NAME)) -
+              unix_timestamp(col(SQL_FIELD_EARLIEST_EVENT_TIME_NAME)) >= policy.window.getTimeWindowSec
+            and
+              col(SQL_FIELD_COUNT_NAME) > policy.window.count
+          )
+      }
 
       val streamAlarmRecords = alarmRecords.collect().map{
         row =>
@@ -92,3 +103,11 @@ object ReduceByTime extends PolicyAnalyzeEngine {
     }
   }
 }
+
+trait Window
+
+object TimeWindow extends Window
+object TimeCountWindow extends Window
+object NumberWindow extends Window
+
+

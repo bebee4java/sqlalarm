@@ -4,7 +4,7 @@ import dt.sql.alarm.conf.AlarmPolicyConf
 import tech.sqlclub.common.log.Logging
 import org.apache.spark.sql.Dataset
 import dt.sql.alarm.reduce.PolicyAnalyzeEngine
-import dt.sql.alarm.reduce.engine.ReduceByTime
+import dt.sql.alarm.reduce.engine.{NumberWindow, ReduceByWindow, TimeCountWindow, TimeWindow}
 import tech.sqlclub.common.utils.JacksonUtils
 import org.apache.spark.sql.functions._
 import dt.sql.alarm.core.Constants._
@@ -151,7 +151,14 @@ object AlarmReduce extends Logging {
 
   def getPolicyAnalyzeEngine(policyType:String, windowType:String):PolicyAnalyzeEngine = {
     (policyType.policyType, windowType.windowType) match {
-      case (PolicyType.absolute, WindowType.time) => ReduceByTime
+      case (PolicyType.absolute, windowType) => {
+        val window = windowType match {
+          case WindowType.number => NumberWindow
+          case WindowType.time => TimeWindow
+          case WindowType.timeCount => TimeCountWindow
+        }
+        new ReduceByWindow(window)
+      }
     }
   }
 
