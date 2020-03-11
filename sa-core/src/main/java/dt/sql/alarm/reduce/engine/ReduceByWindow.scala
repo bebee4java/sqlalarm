@@ -14,10 +14,10 @@ import dt.sql.alarm.core.RecordDetail._
   *
   * Created by songgr on 2020/01/09.
   */
-class ReduceByWindow(window: Window) extends PolicyAnalyzeEngine {
+class ReduceByWindow(window: AggWindow) extends PolicyAnalyzeEngine {
 
   override def analyse(policy: AlarmPolicyConf, records: Dataset[Row]):Array[EngineResult] = {
-    WowLog.logInfo("Noise Reduction Policy: ReduceByTime analyzing....")
+    WowLog.logInfo("Noise Reduction Policy: ReduceByWindow analyzing....")
 
     // filter alarm records
     val table = records.filter(col(alarm) === 1)
@@ -103,11 +103,5 @@ class ReduceByWindow(window: Window) extends PolicyAnalyzeEngine {
     }
   }
 }
-
-trait Window
-
-object TimeWindow extends Window
-object TimeCountWindow extends Window
-object NumberWindow extends Window
 
 

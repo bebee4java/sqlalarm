@@ -96,9 +96,11 @@ object SQLFilter extends Logging {
       logInfo("Simplified SQL: \n" + sql)
       if (!checkSQLSyntax(sql)._1) throw new SQLClubException(s"sql error! item_id: ${ruleConf.item_id}"+ ".sql:\n" + sql + " .\n\n" + ck._2)
 
-      val table = spark.sql(sql).withColumn(RecordDetail.context, to_json(col(RecordDetail.context)))
+      val table = spark.sql(sql)
+        .withColumn(RecordDetail.item_id, lit(ruleConf.item_id))
+        .withColumn(RecordDetail.context, to_json(col(RecordDetail.context)))
 
-      table.join(filtertab, Seq(job_id,job_stat,event_time,context,message), "left_outer")
+      table.join(filtertab, Seq(job_id,job_stat,event_time,context,message,item_id), "left_outer")
         .withColumn(alarm, when(isnull(col(alarm)), 0).otherwise(1))
 
     } else {
@@ -116,6 +118,7 @@ object SQLFilter extends Logging {
       throw new SQLClubException(s"the filter sql exec result schema error!item_id: ${ruleConf.item_id}, schema: ${filtertab.schema}")
     }
 
-    result
+    // 为了过滤脏数据 if job_id and event_time is null
+    result.filter(not(isnull(col(job_id))) and not(isnull(col(event_time))))
   }
 }

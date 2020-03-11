@@ -115,6 +115,24 @@ class RedisOperationsSuite extends FunSuite {
         |}
       """.stripMargin
 
+    value =
+      """
+        |{
+        | "item_id" : "uuid00000001",
+        | "window": {
+        |   "type": "number",
+        |   "value": 4,
+        |   "unit": "n"
+        | },
+        | "policy":{
+        |   "type":"scale",
+        |   "unit":"number",
+        |   "value":2,
+        |   "first_alert": 1
+        | }
+        |}
+      """.stripMargin
+
 
     RedisOperations.addTableCache(key, field, value)
 

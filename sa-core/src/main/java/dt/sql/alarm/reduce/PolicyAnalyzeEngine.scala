@@ -28,7 +28,7 @@ abstract class PolicyAnalyzeEngine {
         jobInfos.foreach{
           jobInfo =>
             val cache = cacheDf.filter(col(item_id) === jobInfo._1 and col(job_id) === jobInfo._2 and col(job_stat) === jobInfo._3)
-              .orderBy(col(event_time)).select(col(SQL_FIELD_VALUE_NAME))
+              .select(col(SQL_FIELD_VALUE_NAME)).orderBy(col(event_time))
             val key = AlarmPolicyConf.getCacheKey(jobInfo._1, jobInfo._2, jobInfo._3)
             WowLog.logInfo(s"add cache records, key: $key, mode: ${mode.name}")
             RedisOperations.setListCache(key, cache, mode)

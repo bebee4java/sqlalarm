@@ -4,7 +4,7 @@ import dt.sql.alarm.conf.AlarmPolicyConf
 import tech.sqlclub.common.log.Logging
 import org.apache.spark.sql.Dataset
 import dt.sql.alarm.reduce.PolicyAnalyzeEngine
-import dt.sql.alarm.reduce.engine.{NumberWindow, ReduceByWindow, TimeCountWindow, TimeWindow}
+import dt.sql.alarm.reduce.engine._
 import tech.sqlclub.common.utils.JacksonUtils
 import org.apache.spark.sql.functions._
 import dt.sql.alarm.core.Constants._
@@ -14,6 +14,7 @@ import org.apache.spark.sql.expressions.Window
 import dt.sql.alarm.conf._
 import dt.sql.alarm.conf.PolicyType._
 import dt.sql.alarm.conf.WindowType._
+import dt.sql.alarm.conf.PolicyUnit._
 
 /**
   *
@@ -26,7 +27,7 @@ object AlarmReduce extends Logging {
 
   def reduce(data:Dataset[RecordDetail], policy: AlarmPolicyConf): Array[EngineResult] = {
     val spark = data.sparkSession
-    val engine = getPolicyAnalyzeEngine(policy.policy.`type`, policy.window.`type`)
+    val engine = getPolicyAnalyzeEngine(policy.policy.`type`, policy.window.`type`, policy.policy.unit)
     // get redis cache
     val redisRdd = RedisOperations.getListCache(AlarmPolicyConf.getCacheKey(policy.item_id) + "*")
     import spark.implicits._
@@ -35,11 +36,19 @@ object AlarmReduce extends Logging {
       JacksonUtils.fromJson[RecordDetail](row, classOf[RecordDetail])
     }.toDS.withColumn(SQL_FIELD_DATAFROM_NAME, lit(SQL_FIELD_CACHE_NAME))       // add dataFrom col
 
+    val streamRecord = data.withColumn(SQL_FIELD_DATAFROM_NAME, lit(SQL_FIELD_STREAM_NAME)) // add dataFrom col
+      .selectExpr(cacheRecord.columns :_*) //为了防止字段顺序不一致
 
-    val streamRecord = data.withColumn(SQL_FIELD_DATAFROM_NAME, lit(SQL_FIELD_STREAM_NAME))    // add dataFrom col
+    // 按比例聚合 不区分job_stat 只按对象分组
+    val jobStatus = if (policy.policy.`type`.isScale) {
+      lit("_")
+    } else {
+      col(job_stat)
+    }
 
     val table = streamRecord // stream data union cache data
       .union(cacheRecord)
+      .withColumn(job_stat, jobStatus)
       .withColumn(SQL_FIELD_VALUE_NAME, to_json(map(fields: _*)))   // add all fields value field
 
     logInfo("AlarmAlert streamData.union(cacheData) schema: ")
@@ -116,14 +125,14 @@ object AlarmReduce extends Logging {
                 (policyType, windowType) match {
                   // 按比例聚合 时间+次数聚合 这两种超出窗口了直接清除不需要push
                   case (PolicyType.scale, _) | (PolicyType.absolute, WindowType.timeCount) =>
-                    WowLog.logInfo("the cache has not been merged for a long time, the cache is useless, del it!")
+                    WowLog.logInfo(s"the cache has not been merged for a long time, the cache is useless, del it! key: $key")
                     RedisOperations.delCache(key)
                     EngineResult(false, null, null, -1)
                   // 按时间聚合 次数聚合 这两种超出窗口需要把历史聚合后push
                   case (PolicyType.absolute, WindowType.time) | (PolicyType.absolute, WindowType.number) =>
                     if (count == 1 && policy.policy.alertFirst ) {
                       // 缓存仅有一条 且 第一次已告警 直接清理不需要push
-                      WowLog.logInfo("this alarm record has been pushed, del it!")
+                      WowLog.logInfo(s"this alarm record has been pushed, del it! key:$key")
                       RedisOperations.delCache(key)
                       EngineResult(false, null, null, -1)
                     } else {
@@ -149,7 +158,7 @@ object AlarmReduce extends Logging {
     }.collect()
   }
 
-  def getPolicyAnalyzeEngine(policyType:String, windowType:String):PolicyAnalyzeEngine = {
+  def getPolicyAnalyzeEngine(policyType:String, windowType:String, policyUnit: String):PolicyAnalyzeEngine = {
     (policyType.policyType, windowType.windowType) match {
       case (PolicyType.absolute, windowType) => {
         val window = windowType match {
@@ -158,6 +167,20 @@ object AlarmReduce extends Logging {
           case WindowType.timeCount => TimeCountWindow
         }
         new ReduceByWindow(window)
+      }
+      case (PolicyType.scale, WindowType.number) => {
+        if (policyUnit.isPercent) {
+          new ReduceByNumScale(Percent)
+        } else {
+          new ReduceByNumScale(Number)
+        }
+      }
+      case (PolicyType.scale, WindowType.time) => {
+        if (policyUnit.isPercent) {
+          null
+        } else {
+          null
+        }
       }
     }
   }

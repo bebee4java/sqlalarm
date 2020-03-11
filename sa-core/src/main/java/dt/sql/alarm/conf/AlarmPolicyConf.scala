@@ -8,17 +8,17 @@ import tech.sqlclub.common.utils.JacksonUtils
 case class AlarmPolicyConf(item_id:String, window:Window, policy:Policy)
 case class Window(`type`: String, value:Int, unit:String, count:Int){
   def getTimeWindowSec = {
-    import Unit._
+    import WindowUnit._
     val u = unit.unit match {
-      case Unit.m => 60
-      case Unit.h => 3600
-      case Unit.d => 86400
+      case WindowUnit.m => 60
+      case WindowUnit.h => 3600
+      case WindowUnit.d => 86400
     }
     value * u
   }
 
 }
-case class Policy(`type`:String, agg:String, value: Double, first_alert:Int){
+case class Policy(`type`:String, unit:String, value: Double, first_alert:Int){
   def alertFirst = 1 == first_alert
 }
 
@@ -34,9 +34,9 @@ object WindowType extends Enumeration{
   val time,number,timeCount = Value
 }
 
-object Unit extends Enumeration{
-  implicit class UnitString(s:String){
-    def unit:Value = Unit.withName(s)
+object WindowUnit extends Enumeration{
+  implicit class WindowUnitString(s:String){
+    def unit:Value = WindowUnit.withName(s)
   }
   type Type = Value
   val m,h,d,n = Value
@@ -52,13 +52,13 @@ object PolicyType extends Enumeration{
   val absolute,scale = Value
 }
 
-object Agg extends Enumeration{
+object PolicyUnit extends Enumeration{
   type Type = Value
-  implicit class AggString(s:String){
-    def agg:Value = Agg.withName(s)
-    def isPercent:Boolean = percent == agg
+  implicit class PolicyUnitString(s:String){
+    def unit:Value = PolicyUnit.withName(s)
+    def isPercent:Boolean = percent == unit
   }
-  val count,percent = Value
+  val number,percent = Value
 }
 
 
@@ -113,7 +113,7 @@ object AlarmPolicyConf {
     },
     "policy":{
         "type":"absolute/scale",
-        "agg":"count/percent",
+        "unit":"number/percent",
         "value":0.9/100,
         "first_alert": 0
     }
