@@ -82,7 +82,7 @@ class RedisOperationsSuite extends FunSuite {
     val key = "sqlalarm_policy:kafka:sqlalarm_event"
     val field = "uuid00000001"
 
-    var value =
+    val value =
       """
         |{
         | "item_id" : "uuid00000001",
@@ -100,7 +100,7 @@ class RedisOperationsSuite extends FunSuite {
         |}
       """.stripMargin
 
-    value =
+    val value1 =
       """
         |{
         | "item_id" : "uuid00000001",
@@ -115,7 +115,7 @@ class RedisOperationsSuite extends FunSuite {
         |}
       """.stripMargin
 
-    value =
+    val value2 =
       """
         |{
         | "item_id" : "uuid00000001",
@@ -133,8 +133,26 @@ class RedisOperationsSuite extends FunSuite {
         |}
       """.stripMargin
 
+    val value3 =
+      """
+        |{
+        | "item_id" : "uuid00000001",
+        | "window": {
+        |   "type": "time",
+        |   "value": 10,
+        |   "unit": "m"
+        | },
+        | "policy":{
+        |   "type":"scale",
+        |   "unit":"number",
+        |   "value":2,
+        |   "first_alert": 1
+        | }
+        |}
+      """.stripMargin
 
-    RedisOperations.addTableCache(key, field, value)
+
+    RedisOperations.addTableCache(key, field, value3)
 
 
   }

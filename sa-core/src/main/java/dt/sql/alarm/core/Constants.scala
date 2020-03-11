@@ -42,6 +42,7 @@ object Constants {
   val SQL_FIELD_TOTAL_COUNT_NAME = "total_count"
   val SQL_FIELD_ALARM_COUNT_NAME = "alarm_count"
   val SQL_FIELD_ALARM_PERCENT_NAME = "alarm_percent"
+  val SQL_FIELD_EVENT_TIME_DURATION_NAME = "event_time_duration"
 
   val SQL_FIELD_CACHE_DURATION = "cache_duration"
   val SQL_FIELD_CACHE_ADD_INTERVAL = "cache_add_interval"

@@ -15,6 +15,7 @@ import dt.sql.alarm.conf._
 import dt.sql.alarm.conf.PolicyType._
 import dt.sql.alarm.conf.WindowType._
 import dt.sql.alarm.conf.PolicyUnit._
+import tech.sqlclub.common.exception.SQLClubException
 
 /**
   *
@@ -177,11 +178,13 @@ object AlarmReduce extends Logging {
       }
       case (PolicyType.scale, WindowType.time) => {
         if (policyUnit.isPercent) {
-          null
+           new ReduceByTimeScale(Percent)
         } else {
-          null
+          new ReduceByTimeScale(Number)
         }
       }
+      case _ =>
+        throw new SQLClubException(s"Unsupported policyAnalyzeEngine type! windowType:$windowType, policyType:$policyType, policyUnit:$policyUnit.")
     }
   }
 
