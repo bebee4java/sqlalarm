@@ -21,49 +21,61 @@ class ReduceByNumScale(scale: Scale) extends PolicyAnalyzeEngine{
 
     val table_rank = records.withColumn(SQL_FIELD_RANK_NAME, row_number()         // rank value
       over( Window.partitionBy(item_id, job_id) orderBy col(event_time).desc ) )
-      .withColumn(SQL_FIELD_CURRENT_RECORD_NAME, first(SQL_FIELD_VALUE_NAME)      // current record value
-        over( Window.partitionBy(item_id, job_id) orderBy col(event_time).desc ) )
-      .withColumn(SQL_FIELD_EARLIEST_RECORD_NAME, last(SQL_FIELD_VALUE_NAME)      // first record value
-        over( Window.partitionBy(item_id, job_id) ) )
       .filter(col(SQL_FIELD_RANK_NAME) <= policy.window.value)  // 取出近n条进行分析
 
-    val pendingRecords = table_rank.groupBy(item_id, job_id)
-      .agg(
-        first(SQL_FIELD_CURRENT_RECORD_NAME).alias(SQL_FIELD_CURRENT_RECORD_NAME), //当前告警记录
-        first(SQL_FIELD_EARLIEST_RECORD_NAME).alias(SQL_FIELD_EARLIEST_RECORD_NAME), //历史最早告警记录
-        count(alarm).alias(SQL_FIELD_TOTAL_COUNT_NAME), // 总条数
-        sum(alarm).alias(SQL_FIELD_ALARM_COUNT_NAME), // 告警条数
-        (sum(alarm) / count(alarm)).alias(SQL_FIELD_ALARM_PERCENT_NAME) // 告警记录比例
-      )
+    table_rank.persist()
 
-    val alarmRecords =
-      scale match {
-        case Number =>
-          pendingRecords.filter(col(SQL_FIELD_TOTAL_COUNT_NAME) >= policy.window.value and // 总数必须达到要求条数
-            col(SQL_FIELD_ALARM_COUNT_NAME) > policy.policy.value)
-        case Percent =>
-          pendingRecords.filter(col(SQL_FIELD_TOTAL_COUNT_NAME) >= policy.window.value and // 总数必须达到要求条数
-            col(SQL_FIELD_ALARM_PERCENT_NAME) > policy.policy.value)
+    try {
+      val alarmEndpoints = table_rank
+        .filter(col(alarm) === 1)
+        .withColumn(SQL_FIELD_CURRENT_RECORD_NAME, first(SQL_FIELD_VALUE_NAME)      // current record value
+          over( Window.partitionBy(item_id, job_id) orderBy col(event_time).desc ) )
+        .withColumn(SQL_FIELD_EARLIEST_RECORD_NAME, last(SQL_FIELD_VALUE_NAME)      // first record value
+          over( Window.partitionBy(item_id, job_id) ) )
+        .groupBy(item_id, job_id)
+        .agg(
+          first(SQL_FIELD_CURRENT_RECORD_NAME).alias(SQL_FIELD_CURRENT_RECORD_NAME), //当前告警记录
+          first(SQL_FIELD_EARLIEST_RECORD_NAME).alias(SQL_FIELD_EARLIEST_RECORD_NAME) //历史最早告警记录
+        )
+
+      val pendingRecords = table_rank.groupBy(item_id, job_id)
+        .agg(
+          count(alarm).alias(SQL_FIELD_TOTAL_COUNT_NAME), // 总条数
+          sum(alarm).alias(SQL_FIELD_ALARM_COUNT_NAME), // 告警条数
+          (sum(alarm) / count(alarm)).alias(SQL_FIELD_ALARM_PERCENT_NAME) // 告警记录比例
+        )
+
+      val alarmRecords =
+        scale match {
+          case Number =>
+            pendingRecords.filter(col(SQL_FIELD_ALARM_COUNT_NAME) > policy.policy.value)
+          case Percent =>
+            pendingRecords.filter(col(SQL_FIELD_TOTAL_COUNT_NAME) >= policy.window.value and // 总数必须达到要求条数
+              col(SQL_FIELD_ALARM_PERCENT_NAME) > policy.policy.value)
+        }
+
+      val result = alarmRecords.join(alarmEndpoints, Seq(item_id,job_id), "left_outer").collect().map{
+        row =>
+          val lastAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_CURRENT_RECORD_NAME), classOf[RecordDetail])
+          val firstAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_EARLIEST_RECORD_NAME), classOf[RecordDetail])
+          val count = row.getAs[Long](SQL_FIELD_ALARM_COUNT_NAME)
+          EngineResult(true, lastAlarmRecord, firstAlarmRecord, count.intValue())
       }
 
-    val result = alarmRecords.collect().map{
-      row =>
-        val lastAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_CURRENT_RECORD_NAME), classOf[RecordDetail])
-        val firstAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_EARLIEST_RECORD_NAME), classOf[RecordDetail])
-        val count = row.getAs[Long](SQL_FIELD_ALARM_COUNT_NAME)
-        EngineResult(true, lastAlarmRecord, firstAlarmRecord, count.intValue())
+      // 没有产生告警的记录需要入cache
+      val cacheDF = table_rank.join(alarmRecords, Seq(item_id,job_id) , "left_outer")
+        .filter(isnull(alarmRecords(SQL_FIELD_ALARM_PERCENT_NAME)))
+        .select(col(item_id), col(job_id), col(job_stat), col(event_time), col(SQL_FIELD_VALUE_NAME))
+
+      addCache(cacheDF, SaveMode.Overwrite)
+
+      result
+
+    } finally {
+      table_rank.unpersist()
     }
 
-    // 没有产生告警的记录需要入cache
-    val cacheDF = table_rank.join(alarmRecords, Seq(item_id,job_id) , "left_outer")
-      .filter(isnull(alarmRecords(SQL_FIELD_ALARM_PERCENT_NAME)))
-      .select(col(item_id), col(job_id), col(job_stat), col(event_time), col(SQL_FIELD_VALUE_NAME))
-
-    addCache(cacheDF, SaveMode.Overwrite)
-
-    result
   }
-
 }
 
 
