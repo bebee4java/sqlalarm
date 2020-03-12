@@ -29,7 +29,7 @@ abstract class PolicyAnalyzeEngine {
           jobInfo =>
             val cache = cacheDf.filter(col(item_id) === jobInfo._1 and col(job_id) === jobInfo._2 and col(job_stat) === jobInfo._3)
               .select(col(SQL_FIELD_VALUE_NAME)).orderBy(col(event_time))
-              .repartition(1) // 重新partition 为了保证但分区写有序
+              .repartition(1) // 重新partition 为了保证单分区写有序
 
             val key = AlarmPolicyConf.getCacheKey(jobInfo._1, jobInfo._2, jobInfo._3)
             RedisOperations.setListCache(key, cache, mode)

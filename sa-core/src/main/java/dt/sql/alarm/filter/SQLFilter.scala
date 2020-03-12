@@ -1,15 +1,15 @@
 package dt.sql.alarm.filter
 
 import dt.sql.alarm.conf.{AlarmPolicyConf, AlarmRuleConf}
-import dt.sql.alarm.core.RecordDetail
 import dt.sql.alarm.core.RecordDetail._
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import tech.sqlclub.common.exception.SQLClubException
 import tech.sqlclub.common.log.Logging
 import org.apache.spark.sql.types.{MapType, StringType}
-import dt.sql.alarm.core.Constants.SQL_FIELD_VALUE_NAME
+import dt.sql.alarm.core.Constants.{SQL_FIELD_RANK_NAME, SQL_FIELD_VALUE_NAME}
 import org.apache.spark.sql.catalyst.plans.logical.{Project, Union}
+import org.apache.spark.sql.expressions.Window
 
 object SQLFilter extends Logging {
 
@@ -89,8 +89,8 @@ object SQLFilter extends Logging {
       s"'${ruleConf.item_id}' as $item_id",
       s"'${source_.`type`}' as $source",
       s"'${source_.topic}' as $topic"
-    ).withColumn(RecordDetail.context, to_json(col(RecordDetail.context)))
-     .withColumn(RecordDetail.alarm, lit(1))
+    ).withColumn(context, to_json(col(context)))
+     .withColumn(alarm, lit(1))
 
 //    logInfo("SQLFilter SQL table filter result schema: ")
 //    filtertab.printSchema()
@@ -111,11 +111,18 @@ object SQLFilter extends Logging {
       if (!checkSQLSyntax(sql)._1) throw new SQLClubException(s"sql error! item_id: ${ruleConf.item_id}"+ ".sql:\n" + sql + " .\n\n" + ck._2)
 
       val table = spark.sql(sql)
-        .withColumn(RecordDetail.item_id, lit(ruleConf.item_id))
-        .withColumn(RecordDetail.context, to_json(col(RecordDetail.context)))
+        .withColumn(item_id, lit(ruleConf.item_id))
+        .withColumn(context, to_json(col(context)))
+        .withColumn(SQL_FIELD_RANK_NAME, row_number()         // rank
+          over( Window.partitionBy(item_id, job_id,job_stat,context,message) orderBy col(event_time).desc ) )
 
-      table.join(filtertab, Seq(job_id,job_stat,event_time,context,message,item_id), "left_outer")
-        .withColumn(alarm, when(isnull(col(alarm)), 0).otherwise(1))
+      val alarmTable = filtertab.withColumn(SQL_FIELD_RANK_NAME, row_number()         // rank
+        over( Window.partitionBy(item_id, job_id,job_stat,context,message) orderBy col(event_time).desc ) )
+
+      // 增加row_number 编号为了防止相同记录产生笛卡尔
+
+      table.join(alarmTable, Seq(item_id,job_id,job_stat,event_time,context,message,SQL_FIELD_RANK_NAME), "left_outer")
+        .withColumn(alarm, when(isnull(col(alarm)), 0).otherwise(1)).drop(SQL_FIELD_RANK_NAME)
 
     } else {
       filtertab
