@@ -47,13 +47,30 @@ object AlarmReduce extends Logging {
       col(job_stat)
     }
 
+    /*
+    root
+      |-- job_id: string (nullable = true)
+      |-- job_stat: string (nullable = false)
+      |-- event_time: string (nullable = true)
+      |-- message: string (nullable = true)
+      |-- context: string (nullable = true)
+      |-- title: string (nullable = true)
+      |-- platform: string (nullable = true)
+      |-- item_id: string (nullable = true)
+      |-- source: string (nullable = true)
+      |-- topic: string (nullable = true)
+      |-- alarm: integer (nullable = false)
+      |-- dataFrom: string (nullable = false)
+      |-- value: string (nullable = true)
+    */
+
     val table = streamRecord // stream data union cache data
       .union(cacheRecord)
       .withColumn(job_stat, jobStatus)
       .withColumn(SQL_FIELD_VALUE_NAME, to_json(map(fields: _*)))   // add all fields value field
 
-    logInfo("AlarmAlert streamData.union(cacheData) schema: ")
-    table.printSchema()
+//    logInfo("AlarmReduce streamData.union(cacheData) schema: ")
+//    table.printSchema()
 
     val result = engine.analyse(policy, table)
 

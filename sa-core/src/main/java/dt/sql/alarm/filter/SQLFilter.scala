@@ -69,6 +69,20 @@ object SQLFilter extends Logging {
       throw new SQLClubException("exec sql output cols error! find cols: [" + sqlCols.mkString(",") + "],requires: [" + requireCols.mkString(",") + "]!")
     }
 
+    /*
+    root
+      |-- job_id: string (nullable = true)
+      |-- job_stat: string (nullable = true)
+      |-- event_time: string (nullable = true)
+      |-- message: string (nullable = true)
+      |-- context: string (nullable = true)
+      |-- title: string (nullable = false)
+      |-- platform: string (nullable = false)
+      |-- item_id: string (nullable = false)
+      |-- source: string (nullable = false)
+      |-- topic: string (nullable = false)
+      |-- alarm: integer (nullable = false)
+    */
     val filtertab = spark.sql(sql).selectExpr(requireCols :_* ).selectExpr("*" ,
       s"'${ruleConf.title}' as $title",
       s"'${ruleConf.platform}' as $platform",
@@ -78,8 +92,8 @@ object SQLFilter extends Logging {
     ).withColumn(RecordDetail.context, to_json(col(RecordDetail.context)))
      .withColumn(RecordDetail.alarm, lit(1))
 
-    logInfo("SQLFilter SQL table filter result schema: ")
-    filtertab.printSchema()
+//    logInfo("SQLFilter SQL table filter result schema: ")
+//    filtertab.printSchema()
 
     import dt.sql.alarm.conf.PolicyType._
     val result = if (policy != null && policy.policy.`type`.isScale){
