@@ -50,7 +50,7 @@
 
         <spark.version>2.4.3</spark.version>
         <spark.bigversion>2.4</spark.bigversion>
-        <common-utils-version>1.0.1</common-utils-version>
+        <common-utils-version>1.0.2</common-utils-version>
     </properties>
 
 
@@ -68,7 +68,7 @@
         </dependency>
         <dependency>
             <groupId>tech.sqlclub</groupId>
-            <artifactId>common-utils</artifactId>
+            <artifactId>common-utils_${scala.compat.version}</artifactId>
             <version>${common-utils-version}</version>
         </dependency>
 
