@@ -55,10 +55,10 @@ class ReduceByTimeScale(scale: Scale) extends PolicyAnalyzeEngine{
       val alarmRecords =
         scale match {
           case Number =>
-            pendingRecords.filter(col(SQL_FIELD_ALARM_COUNT_NAME) > policy.policy.value) // 告警条数达到要求
+            pendingRecords.filter(col(SQL_FIELD_ALARM_COUNT_NAME) > policy.policy.getValue) // 告警条数达到要求
           case Percent =>
             pendingRecords.filter(col(SQL_FIELD_EVENT_TIME_DURATION_NAME) >= policy.window.value and // 时长间隔达到窗口
-              col(SQL_FIELD_ALARM_PERCENT_NAME) > policy.policy.value)
+              col(SQL_FIELD_ALARM_PERCENT_NAME) > policy.policy.getValue)
         }
 
       val result = alarmRecords.join(alarmEndpoints, Seq(item_id,job_id), "left_outer").collect().map{

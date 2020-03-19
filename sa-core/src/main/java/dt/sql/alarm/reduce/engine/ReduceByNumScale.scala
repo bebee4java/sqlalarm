@@ -48,10 +48,10 @@ class ReduceByNumScale(scale: Scale) extends PolicyAnalyzeEngine{
       val alarmRecords =
         scale match {
           case Number =>
-            pendingRecords.filter(col(SQL_FIELD_ALARM_COUNT_NAME) > policy.policy.value)
+            pendingRecords.filter(col(SQL_FIELD_ALARM_COUNT_NAME) > policy.policy.getValue)
           case Percent =>
             pendingRecords.filter(col(SQL_FIELD_TOTAL_COUNT_NAME) >= policy.window.value and // 总数必须达到要求条数
-              col(SQL_FIELD_ALARM_PERCENT_NAME) > policy.policy.value)
+              col(SQL_FIELD_ALARM_PERCENT_NAME) > policy.policy.getValue)
         }
 
       val result = alarmRecords.join(alarmEndpoints, Seq(item_id,job_id), "left_outer").collect().map{

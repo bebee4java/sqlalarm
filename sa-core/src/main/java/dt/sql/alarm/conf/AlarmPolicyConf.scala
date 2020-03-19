@@ -20,6 +20,17 @@ case class Window(`type`: String, value:Int, unit:String, count:Int){
 }
 case class Policy(`type`:String, unit:String, value: Double, first_alert:Int){
   def alertFirst = 1 == first_alert
+
+  import PolicyUnit._
+  def getValue = if (unit.isPercent) norm(value / 100.0d) else value
+
+  def norm(d:Double) = {
+    d match {
+      case x if x>=1 => 1.0d
+      case x if x<=0 => 0.0d
+      case _ => d
+    }
+  }
 }
 
 
@@ -76,6 +87,8 @@ object AlarmPolicyConf {
 
 
   def main(args: Array[String]): Unit = {
+
+    val d = Policy("", "number", 30, 1).getValue
 
     val s =
       """
