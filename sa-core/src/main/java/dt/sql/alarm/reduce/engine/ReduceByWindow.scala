@@ -65,18 +65,19 @@ class ReduceByWindow(window: AggWindow) extends PolicyAnalyzeEngine {
 
       val alarmRecords = window match {
         case NumberWindow =>
-          pendingRecords.filter(col(SQL_FIELD_COUNT_NAME) > policy.window.value )
+          pendingRecords.filter(col(SQL_FIELD_COUNT_NAME) >= policy.window.value )
         case TimeWindow =>
           pendingRecords.filter(
             unix_timestamp(col(SQL_FIELD_CURRENT_EVENT_TIME_NAME)) -
               unix_timestamp(col(SQL_FIELD_EARLIEST_EVENT_TIME_NAME)) >= policy.window.getTimeWindowSec
           )
+        // 近T时间达到n条
         case TimeCountWindow =>
           pendingRecords.filter(
             unix_timestamp(col(SQL_FIELD_CURRENT_EVENT_TIME_NAME)) -
-              unix_timestamp(col(SQL_FIELD_EARLIEST_EVENT_TIME_NAME)) >= policy.window.getTimeWindowSec
+              unix_timestamp(col(SQL_FIELD_EARLIEST_EVENT_TIME_NAME)) <= policy.window.getTimeWindowSec
             and
-              col(SQL_FIELD_COUNT_NAME) > policy.window.count
+              col(SQL_FIELD_COUNT_NAME) >= policy.window.count
           )
       }
 

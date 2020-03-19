@@ -142,10 +142,21 @@ object AlarmReduce extends Logging {
               if (overWindow) {
                 (policyType, windowType) match {
                   // 按比例聚合 时间+次数聚合 这两种超出窗口了直接清除不需要push
-                  case (PolicyType.scale, _) | (PolicyType.absolute, WindowType.timeCount) =>
+                  case (PolicyType.scale, _) =>
                     WowLog.logInfo(s"the cache has not been merged for a long time, the cache is useless, del it! key: $key")
                     RedisOperations.delCache(key)
                     EngineResult(false, null, null, -1)
+                  case (PolicyType.absolute, WindowType.timeCount) =>
+                    if (count >= policy.window.count){
+                      WowLog.logInfo(s"the record cache has warning and merged by daemon clean server. Agg count: $count, key: $key.")
+                      val lastAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_CURRENT_RECORD_NAME), classOf[RecordDetail])
+                      val firstAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_EARLIEST_RECORD_NAME), classOf[RecordDetail])
+                      EngineResult(true, lastAlarmRecord, firstAlarmRecord, count.intValue())
+                    } else {
+                      WowLog.logInfo(s"the cache has not been merged for a long time, the cache is useless, del it! key: $key")
+                      RedisOperations.delCache(key)
+                      EngineResult(false, null, null, -1)
+                    }
                   // 按时间聚合 次数聚合 这两种超出窗口需要把历史聚合后push
                   case (PolicyType.absolute, WindowType.time) | (PolicyType.absolute, WindowType.number) =>
                     if (count == 1 && policy.policy.alertFirst ) {
