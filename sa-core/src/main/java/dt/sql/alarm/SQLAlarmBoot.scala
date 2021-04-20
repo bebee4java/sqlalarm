@@ -53,12 +53,13 @@ object SQLAlarmBoot {
           batchId = batchId + 1
           Thread.sleep(daemonCleanInterval)
         }
+        if ( !SparkRuntime.streamingQuery.isActive ) completed = true
       }
 
       new Thread("launch-cache-cleaner-in-spark-job") {
         setDaemon(true)
         override def run(): Unit = {
-          while (!completed) {
+          while ( !completed ) {
             try {
               launchCleaner
             }catch {
