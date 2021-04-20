@@ -82,7 +82,6 @@ object AlarmReduce extends Logging {
   }
 
   def cacheReduce(data:Dataset[RecordDetail]): Array[EngineResult] = {
-    val spark = data.sparkSession
     val table = data.withColumn(SQL_FIELD_VALUE_NAME, to_json(map(fields: _*)))   // add all fields value field
       .withColumn(SQL_FIELD_CURRENT_RECORD_NAME, first(SQL_FIELD_VALUE_NAME)      // current record value
         over( Window.partitionBy(item_id, job_id, job_stat) orderBy col(event_time).desc ) )
@@ -115,76 +114,72 @@ object AlarmReduce extends Logging {
 
     val policies = RedisOperations.getTableCache(ALARM_POLICY + "*")
     val policyMap = policies.map(item => (item._1, AlarmPolicyConf.formJson(item._2))).collect().toMap
-    import spark.implicits._
-    pendingRecords.mapPartitions{
-      partition =>
-        partition.map{
-          row =>
-            val itemId = row.getAs[String](item_id)
-            val jobId = row.getAs[String](job_id)
-            val jobStat = row.getAs[String](job_stat)
-            val untilTime = row.getAs[Long](SQL_FIELD_CACHE_UNTIL_TIME)
-            val cacheAddInterval = row.getAs[Double](SQL_FIELD_CACHE_ADD_INTERVAL)
-            val count = row.getAs[Long](SQL_FIELD_COUNT_NAME)
-            val key = AlarmPolicyConf.getCacheKey(itemId, jobId, jobStat)
-            val policyConf = policyMap.get(itemId)
-            if (policyConf.isDefined){
-              val policy = policyConf.get
-              val windowType = policy.window.`type`.windowType
-              val policyType = policy.policy.`type`.policyType
-              val overWindow = windowType match {
-                case WindowType.time | WindowType.timeCount =>
-                  untilTime > policy.window.getTimeWindowSec * 1.2  // 乘1.2 为了和主线岔开, 有几率和主线相交
-                case WindowType.number =>
-                  untilTime > cacheAddInterval * count * 1.2
+    pendingRecords.collect().map {
+      row =>
+        val itemId = row.getAs[String](item_id)
+        val jobId = row.getAs[String](job_id)
+        val jobStat = row.getAs[String](job_stat)
+        val untilTime = row.getAs[Long](SQL_FIELD_CACHE_UNTIL_TIME)
+        val cacheAddInterval = row.getAs[Double](SQL_FIELD_CACHE_ADD_INTERVAL)
+        val count = row.getAs[Long](SQL_FIELD_COUNT_NAME)
+        val key = AlarmPolicyConf.getCacheKey(itemId, jobId, jobStat)
+        val policyConf = policyMap.get(itemId)
+        if (policyConf.isDefined) {
+          val policy = policyConf.get
+          val windowType = policy.window.`type`.windowType
+          val policyType = policy.policy.`type`.policyType
+          val overWindow = windowType match {
+            case WindowType.time | WindowType.timeCount =>
+              untilTime > policy.window.getTimeWindowSec * 1.2 // 乘1.2 为了和主线岔开, 有几率和主线相交
+            case WindowType.number =>
+              untilTime > cacheAddInterval * count * 1.2
 
-              }
-              if (overWindow) {
-                (policyType, windowType) match {
-                  // 按比例聚合 时间+次数聚合 这两种超出窗口了直接清除不需要push
-                  case (PolicyType.scale, _) =>
-                    WowLog.logInfo(s"the cache has not been merged for a long time, the cache is useless, del it! key: $key")
-                    RedisOperations.delCache(key)
-                    EngineResult(false, null, null, -1)
-                  case (PolicyType.absolute, WindowType.timeCount) =>
-                    if (count >= policy.window.count){
-                      WowLog.logInfo(s"the record cache has warning and merged by daemon clean server. Agg count: $count, key: $key.")
-                      val lastAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_CURRENT_RECORD_NAME), classOf[RecordDetail])
-                      val firstAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_EARLIEST_RECORD_NAME), classOf[RecordDetail])
-                      EngineResult(true, lastAlarmRecord, firstAlarmRecord, count.intValue())
-                    } else {
-                      WowLog.logInfo(s"the cache has not been merged for a long time, the cache is useless, del it! key: $key")
-                      RedisOperations.delCache(key)
-                      EngineResult(false, null, null, -1)
-                    }
-                  // 按时间聚合 次数聚合 这两种超出窗口需要把历史聚合后push
-                  case (PolicyType.absolute, WindowType.time) | (PolicyType.absolute, WindowType.number) =>
-                    if (count == 1 && policy.policy.alertFirst ) {
-                      // 缓存仅有一条 且 第一次已告警 直接清理不需要push
-                      WowLog.logInfo(s"this alarm record has been pushed, del it! key:$key")
-                      RedisOperations.delCache(key)
-                      EngineResult(false, null, null, -1)
-                    } else {
-                      WowLog.logInfo(s"the record cache has warning and merged by daemon clean server. Agg count: $count, key: $key.")
-                      val lastAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_CURRENT_RECORD_NAME), classOf[RecordDetail])
-                      val firstAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_EARLIEST_RECORD_NAME), classOf[RecordDetail])
-                      EngineResult(true, lastAlarmRecord, firstAlarmRecord, count.intValue())
-                    }
-                }
-              } else {
-                WowLog.logInfo(s"the record cache is under window, ignore it! key: $key.")
-                // 没超过窗口 不聚合告警
+          }
+          if (overWindow) {
+            (policyType, windowType) match {
+              // 按比例聚合 时间+次数聚合 这两种超出窗口了直接清除不需要push
+              case (PolicyType.scale, _) =>
+                WowLog.logInfo(s"the cache has not been merged for a long time, the cache is useless, del it! key: $key")
+                RedisOperations.delCache(key)
                 EngineResult(false, null, null, -1)
-              }
-            } else {
-              // 没有匹配的聚合策略 删除key
-              logWarning(s"has no policy, ignore it! del the key: $key.")
-              RedisOperations.delCache(key)
-              EngineResult(false, null, null, -1)
+              case (PolicyType.absolute, WindowType.timeCount) =>
+                if (count >= policy.window.count) {
+                  WowLog.logInfo(s"the record cache has warning and merged by daemon clean server. Agg count: $count, key: $key.")
+                  val lastAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_CURRENT_RECORD_NAME), classOf[RecordDetail])
+                  val firstAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_EARLIEST_RECORD_NAME), classOf[RecordDetail])
+                  EngineResult(true, lastAlarmRecord, firstAlarmRecord, count.intValue())
+                } else {
+                  WowLog.logInfo(s"the cache has not been merged for a long time, the cache is useless, del it! key: $key")
+                  RedisOperations.delCache(key)
+                  EngineResult(false, null, null, -1)
+                }
+              // 按时间聚合 次数聚合 这两种超出窗口需要把历史聚合后push
+              case (PolicyType.absolute, WindowType.time) | (PolicyType.absolute, WindowType.number) =>
+                if (count == 1 && policy.policy.alertFirst) {
+                  // 缓存仅有一条 且 第一次已告警 直接清理不需要push
+                  WowLog.logInfo(s"this alarm record has been pushed, del it! key:$key")
+                  RedisOperations.delCache(key)
+                  EngineResult(false, null, null, -1)
+                } else {
+                  WowLog.logInfo(s"the record cache has warning and merged by daemon clean server. Agg count: $count, key: $key.")
+                  val lastAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_CURRENT_RECORD_NAME), classOf[RecordDetail])
+                  val firstAlarmRecord = JacksonUtils.fromJson(row.getAs[String](SQL_FIELD_EARLIEST_RECORD_NAME), classOf[RecordDetail])
+                  EngineResult(true, lastAlarmRecord, firstAlarmRecord, count.intValue())
+                }
             }
+          } else {
+            WowLog.logInfo(s"the record cache is under window, ignore it! key: $key.")
+            // 没超过窗口 不聚合告警
+            EngineResult(false, null, null, -1)
+          }
+        } else {
+          // 没有匹配的聚合策略 删除key
+          logWarning(s"has no policy, ignore it! del the key: $key.")
+          RedisOperations.delCache(key)
+          EngineResult(false, null, null, -1)
         }
+    }
 
-    }.collect()
   }
 
   def getPolicyAnalyzeEngine(policyType:String, windowType:String, policyUnit: String):PolicyAnalyzeEngine = {
