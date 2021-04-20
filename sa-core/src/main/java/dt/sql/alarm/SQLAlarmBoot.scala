@@ -14,7 +14,7 @@ object SQLAlarmBoot {
     val params = new ParamsUtils(args)
     ConfigUtils.configBuilder(params.getParamsMap)
     ConfigUtils.showConf()
-    require(ConfigUtils.hasConfig(appName), "Application name must be set")
+//    require(ConfigUtils.hasConfig(appName), "Application name must be set")
     require(ConfigUtils.hasConfig(checkpoint), s"SQLAlarm stream $checkpoint must be set")
     require(ConfigUtils.hasConfig(SQLALARM_SOURCES), s"SQLAlarm stream $SQLALARM_SOURCES must be set")
     require(ConfigUtils.hasConfig(INPUT_PREFIX), s"SQLAlarm stream $INPUT_PREFIX must be set")

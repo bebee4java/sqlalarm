@@ -31,7 +31,9 @@ object SparkRuntime extends Logging {
           ).foreach { f =>
             conf.set(f._1, f._2)
           }
-          conf.setAppName(ConfigUtils.getStringValue(appName))
+          if (ConfigUtils.hasConfig(appName)) {
+            conf.setAppName(ConfigUtils.getStringValue(appName))
+          }
           if (ConfigUtils.hasConfig(master)) {
             conf.setMaster(ConfigUtils.getStringValue(master))
           }
