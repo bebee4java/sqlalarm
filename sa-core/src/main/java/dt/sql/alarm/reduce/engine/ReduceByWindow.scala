@@ -50,7 +50,7 @@ class ReduceByWindow(window: AggWindow) extends PolicyAnalyzeEngine {
       val firstAlarmRecords = if (policy.policy.alertFirst) {
         val firstAlarmRecords = pendingRecords.filter(
           col(SQL_FIELD_DATAFROM_NAME) === SQL_FIELD_STREAM_NAME and  // only from stream
-            col(SQL_FIELD_COUNT_NAME) === 1  // and count=1
+            col(SQL_FIELD_COUNT_NAME) >= 1  // and count>=1
         )
 
         firstAlarmRecords.collect().map {
