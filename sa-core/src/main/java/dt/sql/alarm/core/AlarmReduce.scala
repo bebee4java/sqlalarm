@@ -9,7 +9,7 @@ import tech.sqlclub.common.utils.JacksonUtils
 import org.apache.spark.sql.functions._
 import dt.sql.alarm.core.Constants._
 import dt.sql.alarm.reduce.EngineResult
-import RecordDetail._
+import RecordDetail.{item_id, job_id, _}
 import org.apache.spark.sql.expressions.Window
 import dt.sql.alarm.conf._
 import dt.sql.alarm.conf.PolicyType._
@@ -29,10 +29,20 @@ object AlarmReduce extends Logging {
   def reduce(data:Dataset[RecordDetail], policy: AlarmPolicyConf): Array[EngineResult] = {
     val spark = data.sparkSession
     val engine = getPolicyAnalyzeEngine(policy.policy.`type`, policy.window.`type`, policy.policy.unit)
-    // get redis cache
-    val redisRdd = RedisOperations.getListCache(AlarmPolicyConf.getCacheKey(policy.item_id) + "*")
     import spark.implicits._
-    val cacheRecord = redisRdd.map{
+    // 获取相关key的信息
+    val keyInfos = data.groupBy(item_id, job_id).count().map {
+      row =>
+        (row.getAs[String](item_id), row.getAs[String](job_id))
+    }.collect()
+
+    // get redis cache
+    val cacheRdd = keyInfos.map {
+      case (item_id, job_id) =>
+        RedisOperations.getListCache(AlarmPolicyConf.getCacheKey(item_id, job_id) + "*")
+    }.reduce(_ union _)
+
+    val cacheRecord = cacheRdd.map{
       row =>
       JacksonUtils.fromJson[RecordDetail](row, classOf[RecordDetail])
     }.toDS.withColumn(SQL_FIELD_DATAFROM_NAME, lit(SQL_FIELD_CACHE_NAME))       // add dataFrom col

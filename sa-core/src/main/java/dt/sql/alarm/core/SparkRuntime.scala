@@ -12,6 +12,7 @@ import tech.sqlclub.common.log.Logging
 import tech.sqlclub.common.utils.ConfigUtils
 import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
 import tech.sqlclub.common.exception.SQLClubException
+import scala.collection.JavaConverters._
 
 object SparkRuntime extends Logging {
   private var sparkSession :SparkSession = null
@@ -131,12 +132,14 @@ object SparkRuntime extends Logging {
 object RedisOperations {
   import redis.clients.jedis.Jedis
   import com.redislabs.provider.redis._
+  import redis.clients.jedis.ScanParams
   import com.redislabs.provider.redis.util.ConnectionUtils
 
   lazy private val spark = SparkRuntime.getSparkSession
   def sc:SparkContext = spark.sparkContext
 
   lazy private val redisEndpoint = RedisConfig.fromSparkConf(SparkEnv.get.conf).initialHost
+  lazy private val readWriteConfig = ReadWriteConfig.fromSparkConf(SparkEnv.get.conf)
 
   def IncorrectMsg = s"RedisOperations keysOrKeyPattern should be String or Array[String]"
 
@@ -175,6 +178,19 @@ object RedisOperations {
       case _ => throw new SQLClubException(IncorrectMsg)
     }
 
+  }
+
+  def scanListCacheKeys(keyPattern:String)
+                       (implicit conn:Jedis = redisEndpoint.connect(), config:ReadWriteConfig = readWriteConfig):Seq[String]= {
+    val keys = new java.util.ArrayList[String]
+    val params = new ScanParams().`match`(keyPattern).count(config.scanCount)
+    var cursor = "0"
+    do {
+      val scan = conn.scan(cursor, params)
+      keys.addAll(scan.getResult)
+      cursor = scan.getCursor
+    } while (cursor != "0")
+    keys.asScala
   }
 
   def setListCache[T](key:String, data:T, saveMode: SaveMode, ttl:Int=0) = {

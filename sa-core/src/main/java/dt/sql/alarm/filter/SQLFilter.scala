@@ -7,9 +7,9 @@ import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import tech.sqlclub.common.exception.SQLClubException
 import tech.sqlclub.common.log.Logging
 import org.apache.spark.sql.types.{MapType, StringType}
-import dt.sql.alarm.core.Constants.{SQL_FIELD_RANK_NAME, SQL_FIELD_VALUE_NAME}
+import dt.sql.alarm.core.Constants.SQL_FIELD_VALUE_NAME
+import dt.sql.alarm.core.RedisOperations
 import org.apache.spark.sql.catalyst.plans.logical.{Project, Union}
-import org.apache.spark.sql.expressions.Window
 
 object SQLFilter extends Logging {
 
@@ -94,7 +94,7 @@ object SQLFilter extends Logging {
       s"'${source_.`type`}' as $source",
       s"'${source_.topic}' as $topic"
     ).withColumn(context, to_json(col(context)))
-     .withColumn(alarm, lit(1))
+      .withColumn(alarm, lit(1))
 
 //    logInfo("SQLFilter SQL table filter result schema: ")
 //    filtertab.printSchema()
@@ -106,27 +106,40 @@ object SQLFilter extends Logging {
       val project = sqlPlan match {
         case p if p.isInstanceOf[Union] => p.children.head.asInstanceOf[Project]
         case p if p.isInstanceOf[Project] => p.asInstanceOf[Project]
+        case _ => null
       }
 
+      if (project == null) throw new SQLClubException(s"Only supports simple SQL! item_id: ${ruleConf.item_id}"+ ". sql:\n" + sql + " .")
+
       val output = project.projectList.map(_.sql).mkString(",")
-      val sql = s"SELECT $output FROM $tableName"
+      val ssql = s"SELECT $output FROM $tableName"
 
-      logInfo(s"rule item_id: ${ruleConf.item_id}, the simplified SQL: \n" + sql)
-      if (!checkSQLSyntax(sql)._1) throw new SQLClubException(s"sql error! item_id: ${ruleConf.item_id}"+ ".sql:\n" + sql + " .\n\n" + ck._2)
+      logInfo(s"rule item_id: ${ruleConf.item_id}, the simplified SQL: \n" + ssql)
+      if (!checkSQLSyntax(ssql)._1) throw new SQLClubException(s"Simplified sql error! item_id: ${ruleConf.item_id}"+ ". Simplified sql:\n" + ssql + " .\n\n" + ck._2)
 
-      val table = spark.sql(sql)
+      val table = spark.sql(ssql)
         .withColumn(item_id, lit(ruleConf.item_id))
         .withColumn(context, to_json(col(context)))
-        .withColumn(SQL_FIELD_RANK_NAME, row_number()         // rank
-          over( Window.partitionBy(item_id, job_id,job_stat,context,message) orderBy col(event_time).desc ) )
 
-      val alarmTable = filtertab.withColumn(SQL_FIELD_RANK_NAME, row_number()         // rank
-        over( Window.partitionBy(item_id, job_id,job_stat,context,message) orderBy col(event_time).desc ) )
+      // 需要取出redis已经缓存的job数据，因为比例策略需要放入正常数据，及时当前流里的记录都是正常也需要放入相关的缓存
+      val redisCacheKeys = RedisOperations.scanListCacheKeys(AlarmPolicyConf.getCacheKey(policy.item_id) + "*")
+      import spark.implicits._
+      val cacheKeys = redisCacheKeys.map{
+        key =>
+          val its = key.split(":")
+          if (its.size >= 3) {
+            (its(1), its(2))
+          } else null
+      }.toDF(item_id, job_id)
 
-      // 增加row_number 编号为了防止相同记录产生笛卡尔
+      val dimTab = filtertab.select(item_id,job_id).union(cacheKeys).groupBy(item_id, job_id).count()
 
-      table.join(alarmTable, Seq(item_id,job_id,job_stat,event_time,context,message,SQL_FIELD_RANK_NAME), "left_outer")
-        .withColumn(alarm, when(isnull(col(alarm)), 0).otherwise(1)).drop(SQL_FIELD_RANK_NAME)
+      // Join 维表去除与当前无关的记录
+      val pendingTab = table.join(dimTab, Seq(item_id, job_id), "inner")
+        .join(filtertab, getAllSQLFieldName :+ item_id, "left_outer")
+        .withColumn(alarm, when(isnull(col(alarm)), 0).otherwise(1))
+
+      pendingTab.selectExpr(getAllFieldName :_*)
 
     } else {
       filtertab

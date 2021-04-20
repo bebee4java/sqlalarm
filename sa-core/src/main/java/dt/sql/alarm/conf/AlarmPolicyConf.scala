@@ -79,6 +79,8 @@ object AlarmPolicyConf {
 
   def getCacheKey(itemId:String) = List(ALARM_CACHE,itemId).mkString(":")
 
+  def getCacheKey(itemId:String, jobId:String) = List(ALARM_CACHE,itemId,jobId).mkString(":")
+
   def getCacheKey(itemId:String, jobId:String, jobStat:String) = List(ALARM_CACHE, itemId, jobId, jobStat).mkString(":")
 
   def formJson(json:String) = JacksonUtils.fromJson[AlarmPolicyConf](json, classOf[AlarmPolicyConf])

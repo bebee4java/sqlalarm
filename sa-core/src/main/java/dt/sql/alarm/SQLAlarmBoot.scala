@@ -51,6 +51,7 @@ object SQLAlarmBoot {
             AlarmAlert.push(results, true) // Force clean cache after sending
           }
           batchId = batchId + 1
+          spark.sparkContext.clearJobGroup()
           Thread.sleep(daemonCleanInterval)
         }
         if ( !SparkRuntime.streamingQuery.isActive ) completed = true
