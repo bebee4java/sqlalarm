@@ -48,5 +48,9 @@ object Constants {
   val SQL_FIELD_CACHE_ADD_INTERVAL = "cache_add_interval"
   val SQL_FIELD_CACHE_UNTIL_TIME = "cache_until_time"
 
-
+  val SPARK_REDIS_MODE = "spark.redis.mode"
+  val SPARK_REDIS_MASTER = "spark.redis.master"
+  val SPARK_REDIS_MASTER_DEFAULT = "mymaster"
+  val SPARK_REDIS_SENTINEL_MODE = "sentinel"
+  val SPARK_REDIS_SINGLE_MODE = "single"
 }
