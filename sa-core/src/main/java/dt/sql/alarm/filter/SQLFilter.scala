@@ -8,7 +8,7 @@ import tech.sqlclub.common.exception.SQLClubException
 import tech.sqlclub.common.log.Logging
 import org.apache.spark.sql.types.{MapType, StringType}
 import dt.sql.alarm.core.Constants.SQL_FIELD_VALUE_NAME
-import dt.sql.alarm.core.RedisOperations
+import dt.sql.alarm.core.{RedisOperations, WowLog}
 import org.apache.spark.sql.catalyst.plans.logical.{Project, Union}
 
 object SQLFilter extends Logging {
@@ -123,6 +123,7 @@ object SQLFilter extends Logging {
 
       // 需要取出redis已经缓存的job数据，因为比例策略需要放入正常数据，及时当前流里的记录都是正常也需要放入相关的缓存
       val redisCacheKeys = RedisOperations.scanListCacheKeys(AlarmPolicyConf.getCacheKey(policy.item_id) + "*")
+      WowLog.logInfo(s"Under the rule id: ${policy.item_id},redis caches existing keys: [" + redisCacheKeys.mkString(", ") + "]")
       import spark.implicits._
       val cacheKeys = redisCacheKeys.map{
         key =>
@@ -157,6 +158,6 @@ object SQLFilter extends Logging {
     }
 
     // 为了过滤脏数据 if job_id and event_time is null
-    result.filter(not(isnull(col(job_id))) and not(isnull(col(event_time))))
+    result.filter(not(isnull(col(job_id))) and not(isnull(col(event_time)))).distinct()
   }
 }

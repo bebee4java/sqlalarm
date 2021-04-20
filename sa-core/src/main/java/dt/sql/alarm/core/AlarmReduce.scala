@@ -36,6 +36,8 @@ object AlarmReduce extends Logging {
         (row.getAs[String](item_id), row.getAs[String](job_id))
     }.collect()
 
+    WowLog.logInfo("Alarm reduce starting. Dim key info: " + keyInfos.mkString("\n"))
+
     // get redis cache
     val cacheRdd = keyInfos.map {
       case (item_id, job_id) =>
@@ -84,9 +86,14 @@ object AlarmReduce extends Logging {
 
     val result = engine.analyse(policy, table)
 
+    val warningResults = result.filter(_.hasWarning)
 
-    WowLog.logInfo("Policy Engine Analyze hasWarning result is :")
-    logInfo(result.filter(_.hasWarning).mkString("\n"))
+    if (warningResults.length > 0) {
+      WowLog.logInfo("Policy Engine Analyze hasWarning result is :")
+      logInfo(result.filter(_.hasWarning).mkString("\n"))
+    } else {
+      WowLog.logInfo("Policy Engine Analyze done. Has no Warning result!")
+    }
 
     result
   }

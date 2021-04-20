@@ -57,7 +57,7 @@ class ReduceByTimeScale(scale: Scale) extends PolicyAnalyzeEngine{
           case Number =>
             pendingRecords.filter(col(SQL_FIELD_ALARM_COUNT_NAME) > policy.policy.getValue) // 告警条数达到要求
           case Percent =>
-            pendingRecords.filter(col(SQL_FIELD_EVENT_TIME_DURATION_NAME) >= policy.window.value and // 时长间隔达到窗口
+            pendingRecords.filter(col(SQL_FIELD_EVENT_TIME_DURATION_NAME) >= (policy.window.getTimeWindowSec * policy.policy.getValue)  and // 时长间隔达到窗口
               col(SQL_FIELD_ALARM_PERCENT_NAME) > policy.policy.getValue)
         }
 
