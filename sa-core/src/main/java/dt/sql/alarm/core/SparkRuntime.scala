@@ -1,6 +1,6 @@
 package dt.sql.alarm.core
 
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.{SparkConf, SparkContext, SparkEnv}
 import dt.sql.alarm.input.SourceInfo
 import Constants._
 import dt.sql.alarm.filter.SQLFilter
@@ -136,7 +136,7 @@ object RedisOperations {
   lazy private val spark = SparkRuntime.getSparkSession
   def sc:SparkContext = spark.sparkContext
 
-  lazy private val redisEndpoint = RedisConfig.fromSparkConf(sc.getConf).initialHost
+  lazy private val redisEndpoint = RedisConfig.fromSparkConf(SparkEnv.get.conf).initialHost
 
   def IncorrectMsg = s"RedisOperations keysOrKeyPattern should be String or Array[String]"
 
