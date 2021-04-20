@@ -182,15 +182,18 @@ object RedisOperations {
 
   def scanListCacheKeys(keyPattern:String)
                        (implicit conn:Jedis = redisEndpoint.connect(), config:ReadWriteConfig = readWriteConfig):Seq[String]= {
-    val keys = new java.util.ArrayList[String]
-    val params = new ScanParams().`match`(keyPattern).count(config.scanCount)
-    var cursor = "0"
-    do {
-      val scan = conn.scan(cursor, params)
-      keys.addAll(scan.getResult)
-      cursor = scan.getCursor
-    } while (cursor != "0")
-    keys.asScala
+    ConnectionUtils.withConnection[Seq[String]](conn) {
+      conn =>
+        val keys = new java.util.ArrayList[String]
+        val params = new ScanParams().`match`(keyPattern).count(config.scanCount)
+        var cursor = "0"
+        do {
+          val scan = conn.scan(cursor, params)
+          keys.addAll(scan.getResult)
+          cursor = scan.getCursor
+        } while (cursor != "0")
+        keys.asScala
+    }
   }
 
   def setListCache[T](key:String, data:T, saveMode: SaveMode, ttl:Int=0) = {
