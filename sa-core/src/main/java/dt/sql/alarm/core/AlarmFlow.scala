@@ -65,7 +65,7 @@ object AlarmFlow extends Logging {
       item =>
         val rule = item._2  // 告警规则
         val policyConf = RedisOperations.getTableCache(AlarmPolicyConf.getRkey(rule.source.`type`, rule.source.topic), rule.item_id)
-        val policy = AlarmPolicyConf.formJson(policyConf) //告警策略
+        val policy = if(policyConf != null && policyConf.nonEmpty) AlarmPolicyConf.formJson(policyConf) else null //告警策略
         // sql filter
         WowLog.logInfo("AlarmFlow table filter...")
         val filterTable = filterFunc(data, rule, policy)
