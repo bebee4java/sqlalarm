@@ -29,9 +29,13 @@ object SQLFilter extends Logging {
         s"cast(get_json_object($SQL_FIELD_VALUE_NAME, '${field.xpath}') as ${field.`type`}) as ${field.name}"
     }
 
-    val table = df.filter( col(source) === source_.`type` and col(topic) === source_.topic ).selectExpr(fields :_*)
+    val table = try {
+        df.filter( col(source) === source_.`type` and col(topic) === source_.topic ).selectExpr(fields :_*)
+      } catch {
+        case e:Exception => throw new SQLClubException(e.getMessage, e)
+      }
 
-    logInfo(s"SQLFilter SQL table [ $tableName ] schema: ")
+    logInfo(s"rule item_id: ${ruleConf.item_id}, the SQLFilter SQL table [ $tableName ] schema: ")
     table.printSchema()
 
     table.createOrReplaceTempView(tableName)
@@ -56,7 +60,7 @@ object SQLFilter extends Logging {
     val ck = checkSQLSyntax(sql)
     if (!ck._1) throw new SQLClubException(s"input filter sql error! item_id: ${ruleConf.item_id}"+ ".sql:\n" + sql + " .\n\n" + ck._2)
 
-    logInfo(s"input ruleConf:[source:${source_.`type`}, topic:$topic, tableName:$tableName] exec SQL: $sql")
+    logInfo(s"input ruleConf:[source:${source_.`type`}, topic:$topic, tableName:$tableName]. item_id: ${ruleConf.item_id}, exec SQL: $sql")
 
     val sqlPlan = spark.sql(sql).queryExecution.analyzed
 
@@ -65,7 +69,7 @@ object SQLFilter extends Logging {
     val b = (true /: requireCols){(x,y) => x && sqlCols.contains(y)}
 
     if(!b){
-      logError("exec sql output cols must contains col list: " + requireCols)
+      logError(s"rule item_id: ${ruleConf.item_id}, exec sql output cols must contains col list: " + requireCols)
       throw new SQLClubException("exec sql output cols error! find cols: [" + sqlCols.mkString(",") + "],requires: [" + requireCols.mkString(",") + "]!")
     }
 
@@ -107,7 +111,7 @@ object SQLFilter extends Logging {
       val output = project.projectList.map(_.sql).mkString(",")
       val sql = s"SELECT $output FROM $tableName"
 
-      logInfo("Simplified SQL: \n" + sql)
+      logInfo(s"rule item_id: ${ruleConf.item_id}, the simplified SQL: \n" + sql)
       if (!checkSQLSyntax(sql)._1) throw new SQLClubException(s"sql error! item_id: ${ruleConf.item_id}"+ ".sql:\n" + sql + " .\n\n" + ck._2)
 
       val table = spark.sql(sql)

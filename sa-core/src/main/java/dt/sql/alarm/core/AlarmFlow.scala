@@ -61,33 +61,39 @@ object AlarmFlow extends Logging {
       return
     }
 
-    rulesWithItemId.foreach{
+    rulesWithItemId.filter(null != _._2).foreach{
       item =>
         val rule = item._2  // 告警规则
         val policyConf = RedisOperations.getTableCache(AlarmPolicyConf.getRkey(rule.source.`type`, rule.source.topic), rule.item_id)
         val policy = if(policyConf != null && policyConf.nonEmpty) AlarmPolicyConf.formJson(policyConf) else null //告警策略
-        // sql filter
-        WowLog.logInfo("AlarmFlow table filter...")
-        val filterTable = filterFunc(data, rule, policy)
-        WowLog.logInfo("AlarmFlow table filter pass!")
+
+        try {
+          // sql filter
+          WowLog.logInfo("AlarmFlow table filter...")
+          val filterTable = filterFunc(data, rule, policy)
+          WowLog.logInfo("AlarmFlow table filter pass!")
 
 
-        sinkAndAlert(filterTable, sinkFunc, alertFunc){
-          () =>
-            val tasks = taskList.iterator()
-            WowLog.logInfo(s"We will run ${taskList.size()} tasks...")
-            while (tasks.hasNext){
-              val task = tasks.next()
-              val result = runTask(task)
-              if (result._1) {
-                tasks.remove()
-              } else {
-                killBatchJob(spark, groupId, jobName)
+          sinkAndAlert(filterTable, sinkFunc, alertFunc){
+            () =>
+              val tasks = taskList.iterator()
+              WowLog.logInfo(s"We will run ${taskList.size()} tasks...")
+              while (tasks.hasNext){
+                val task = tasks.next()
+                val result = runTask(task)
+                if (result._1) {
+                  tasks.remove()
+                } else {
+                  killBatchJob(spark, groupId, jobName)
+                  throw result._2.get
+                }
               }
-            }
-            WowLog.logInfo(s"All task completed! Current task list number is: ${taskList.size()}.")
-        }(rule, policy)
-
+              WowLog.logInfo(s"All task completed! Current task list number is: ${taskList.size()}.")
+          }(rule, policy)
+        } catch {
+          case e:SQLClubException =>
+            logError(e.getMessage, e)
+        }
     }
     WowLog.logInfo("Alarm flow end!")
   }

@@ -50,7 +50,7 @@
 
         <spark.version>2.4.3</spark.version>
         <spark.bigversion>2.4</spark.bigversion>
-        <common-utils-version>1.0.2</common-utils-version>
+        <common-utils-version>1.0.3</common-utils-version>
     </properties>
 
 
